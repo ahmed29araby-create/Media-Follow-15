@@ -14,16 +14,181 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      change_requests: {
+        Row: {
+          created_at: string
+          file_id: string
+          id: string
+          new_file_name: string | null
+          reason: string | null
+          request_type: Database["public"]["Enums"]["request_type"]
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_id: string
+          id?: string
+          new_file_name?: string | null
+          reason?: string | null
+          request_type: Database["public"]["Enums"]["request_type"]
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_id?: string
+          id?: string
+          new_file_name?: string | null
+          reason?: string | null
+          request_type?: Database["public"]["Enums"]["request_type"]
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_requests_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      files: {
+        Row: {
+          created_at: string
+          drive_path: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          quality: Database["public"]["Enums"]["quality_type"]
+          status: Database["public"]["Enums"]["file_status"]
+          storage_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          drive_path?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number
+          id?: string
+          quality?: Database["public"]["Enums"]["quality_type"]
+          status?: Database["public"]["Enums"]["file_status"]
+          storage_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          drive_path?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          quality?: Database["public"]["Enums"]["quality_type"]
+          status?: Database["public"]["Enums"]["file_status"]
+          storage_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          account_status: Database["public"]["Enums"]["account_status"]
+          created_at: string
+          display_name: string
+          email: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"]
+          created_at?: string
+          display_name: string
+          email: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_status?: Database["public"]["Enums"]["account_status"]
+          created_at?: string
+          display_name?: string
+          email?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      account_status: "pending" | "approved" | "rejected"
+      app_role: "admin" | "member"
+      file_status: "pending" | "approved" | "rejected" | "delete_requested"
+      quality_type: "proxy" | "original"
+      request_status: "pending" | "approved" | "rejected"
+      request_type: "edit" | "delete"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +315,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_status: ["pending", "approved", "rejected"],
+      app_role: ["admin", "member"],
+      file_status: ["pending", "approved", "rejected", "delete_requested"],
+      quality_type: ["proxy", "original"],
+      request_status: ["pending", "approved", "rejected"],
+      request_type: ["edit", "delete"],
+    },
   },
 } as const
