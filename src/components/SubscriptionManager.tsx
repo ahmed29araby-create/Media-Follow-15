@@ -56,6 +56,12 @@ export default function SubscriptionManager({ organizationId, organizationName }
   const [grantOpen, setGrantOpen] = useState(false);
   const [grantMonths, setGrantMonths] = useState("1");
   const [granting, setGranting] = useState(false);
+  const [grantPassword, setGrantPassword] = useState("");
+
+  // Cancel confirmation
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelPassword, setCancelPassword] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   // Screenshot viewer
   const [viewingScreenshot, setViewingScreenshot] = useState<string | null>(null);
@@ -93,9 +99,24 @@ export default function SubscriptionManager({ organizationId, organizationName }
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
 
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser?.email) return false;
+    const { error } = await supabase.auth.signInWithPassword({
+      email: currentUser.email,
+      password,
+    });
+    return !error;
+  };
+
   const handleGrantFree = async () => {
     if (!user) return;
+    if (!grantPassword) { toast.error("يرجى إدخال كلمة المرور"); return; }
     setGranting(true);
+
+    const valid = await verifyPassword(grantPassword);
+    if (!valid) { toast.error("كلمة المرور غير صحيحة"); setGranting(false); return; }
+
     const months = parseInt(grantMonths);
 
     let error: any = null;
@@ -141,6 +162,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
         ? `تم تمديد الاشتراك بـ ${months} شهر إضافي`
         : `تم تفعيل الاشتراك المجاني لمدة ${months} شهر`);
       setGrantOpen(false);
+      setGrantPassword("");
       fetchData();
     }
     setGranting(false);
@@ -148,6 +170,12 @@ export default function SubscriptionManager({ organizationId, organizationName }
 
   const handleCancelSubscription = async () => {
     if (!subscription) return;
+    if (!cancelPassword) { toast.error("يرجى إدخال كلمة المرور"); return; }
+    setCancelling(true);
+
+    const valid = await verifyPassword(cancelPassword);
+    if (!valid) { toast.error("كلمة المرور غير صحيحة"); setCancelling(false); return; }
+
     const { error } = await supabase
       .from("subscriptions")
       .update({ ends_at: new Date().toISOString(), notes: `${subscription.notes || ""}\n⛔ تم إلغاء الاشتراك يدوياً` })
@@ -159,8 +187,11 @@ export default function SubscriptionManager({ organizationId, organizationName }
       toast.error(error.message);
     } else {
       toast.success("تم إلغاء الاشتراك بنجاح");
+      setCancelOpen(false);
+      setCancelPassword("");
       fetchData();
     }
+    setCancelling(false);
   };
 
   const handleApprovePayment = async (payment: PaymentRequest) => {
@@ -317,7 +348,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
           {isActive ? "تمديد الاشتراك (مجاني)" : "دفع اشتراك الشركة (مجاني)"}
         </Button>
         {isActive && (
-          <Button variant="destructive" className="w-full gap-2" onClick={handleCancelSubscription}>
+          <Button variant="destructive" className="w-full gap-2" onClick={() => setCancelOpen(true)}>
             <XCircle className="h-4 w-4" />
             إلغاء الاشتراك
           </Button>
@@ -349,12 +380,41 @@ export default function SubscriptionManager({ organizationId, organizationName }
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>كلمة المرور (تأكيد)</Label>
+              <Input type="password" value={grantPassword} onChange={(e) => setGrantPassword(e.target.value)} placeholder="أدخل كلمة مرور حسابك" />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGrantOpen(false)}>إلغاء</Button>
-            <Button onClick={handleGrantFree} disabled={granting}>
+            <Button variant="outline" onClick={() => { setGrantOpen(false); setGrantPassword(""); }}>إلغاء</Button>
+            <Button onClick={handleGrantFree} disabled={granting || !grantPassword}>
               {granting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               تفعيل الاشتراك
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel confirmation dialog */}
+      <Dialog open={cancelOpen} onOpenChange={(open) => { if (!open) { setCancelOpen(false); setCancelPassword(""); } }}>
+        <DialogContent className="bg-card border-border max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">تأكيد إلغاء الاشتراك</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              سيتم إلغاء اشتراك <strong className="text-foreground">{organizationName}</strong> وإيقاف الحساب. أدخل كلمة المرور للتأكيد.
+            </p>
+            <div className="space-y-2">
+              <Label>كلمة المرور</Label>
+              <Input type="password" value={cancelPassword} onChange={(e) => setCancelPassword(e.target.value)} placeholder="أدخل كلمة مرور حسابك" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelOpen(false); setCancelPassword(""); }}>إلغاء</Button>
+            <Button variant="destructive" onClick={handleCancelSubscription} disabled={cancelling || !cancelPassword}>
+              {cancelling && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              تأكيد الإلغاء
             </Button>
           </DialogFooter>
         </DialogContent>
