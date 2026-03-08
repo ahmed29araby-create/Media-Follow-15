@@ -51,10 +51,10 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">الإشعارات</h1>
+    <div className="p-6 max-w-2xl mx-auto space-y-6" dir="rtl">
+      <div className="text-center space-y-3 pb-4 border-b border-border">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>الإشعارات</h1>
           <p className="text-sm text-muted-foreground">جميع التحديثات والإشعارات</p>
         </div>
         {notifications.some(n => !n.is_read) && (
