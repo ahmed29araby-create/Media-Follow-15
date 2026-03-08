@@ -10,8 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   CreditCard, Clock, CheckCircle, XCircle, Upload, Loader2, CalendarDays, Phone, AlertCircle,
 } from "lucide-react";
-
-const PLAN_PRICE = 400;
+import PlanCards, { PLANS, type Plan } from "@/components/subscription/PlanCards";
 
 interface Subscription {
   id: string;
@@ -40,7 +39,7 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Payment form
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [senderPhone, setSenderPhone] = useState("");
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -61,15 +60,13 @@ export default function SubscriptionPage() {
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false }),
     ]);
-    const latestSub = subRes.data?.[0] ?? null;
-    setSubscription(latestSub);
+    setSubscription(subRes.data?.[0] ?? null);
     setPayments((payRes.data as Payment[]) ?? []);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
-    // Fetch vodafone number setting
     supabase.from("admin_settings").select("setting_value").eq("setting_key", "vodafone_cash_number").maybeSingle().then(({ data }) => {
       if (data) setVodafoneNumber(data.setting_value);
     });
@@ -82,8 +79,15 @@ export default function SubscriptionPage() {
 
   const hasPendingPayment = payments.some((p) => p.status === "pending");
 
+  const handleSelectPlan = (plan: Plan) => {
+    setSelectedPlan(plan);
+    setShowPaymentForm(true);
+    // scroll to payment form
+    setTimeout(() => document.getElementById("payment-form")?.scrollIntoView({ behavior: "smooth" }), 100);
+  };
+
   const handleSubmitPayment = async () => {
-    if (!user || !organizationId) return;
+    if (!user || !organizationId || !selectedPlan) return;
     if (!senderPhone.trim()) {
       toast.error("أدخل رقم الهاتف المُحوَّل منه");
       return;
@@ -95,7 +99,6 @@ export default function SubscriptionPage() {
 
     setSubmitting(true);
     try {
-      // Upload screenshot
       const ext = screenshotFile.name.split(".").pop();
       const path = `${organizationId}/${Date.now()}.${ext}`;
       const { error: uploadErr } = await supabase.storage
@@ -103,12 +106,11 @@ export default function SubscriptionPage() {
         .upload(path, screenshotFile);
       if (uploadErr) throw uploadErr;
 
-      // Create payment request
       const { error: insertErr } = await supabase.from("subscription_payments").insert({
         organization_id: organizationId,
         user_id: user.id,
         months: 1,
-        amount: PLAN_PRICE,
+        amount: selectedPlan.price,
         sender_phone: senderPhone.trim(),
         screenshot_path: path,
         status: "pending",
@@ -119,6 +121,7 @@ export default function SubscriptionPage() {
       setSenderPhone("");
       setScreenshotFile(null);
       setShowPaymentForm(false);
+      setSelectedPlan(null);
       fetchData();
     } catch (err: any) {
       toast.error(err.message || "حدث خطأ أثناء الإرسال");
@@ -138,7 +141,7 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="p-6 space-y-8 max-w-2xl mx-auto" dir="rtl">
+    <div className="p-4 md:p-6 space-y-8 max-w-6xl mx-auto" dir="rtl">
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -198,62 +201,39 @@ export default function SubscriptionPage() {
         </CardContent>
       </Card>
 
-      {/* Plan card */}
-      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">خطة الاشتراك الشهري</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold text-primary">{PLAN_PRICE}</span>
-            <span className="text-sm text-muted-foreground">جنيه / شهر</span>
-          </div>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" /> إدارة كاملة للفريق والملفات
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" /> رفع ومراجعة الملفات
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" /> مزامنة مع Google Drive
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" /> إشعارات فورية
-            </li>
-          </ul>
+      {/* Pending payment notice */}
+      {hasPendingPayment && (
+        <div className="flex items-center gap-2 bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm">
+          <Clock className="h-5 w-5 text-warning shrink-0" />
+          <span className="text-foreground">طلب اشتراك قيد المراجعة — في انتظار موافقة مالك المنصة</span>
+        </div>
+      )}
 
-          {hasPendingPayment ? (
-            <div className="flex items-center gap-2 bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm">
-              <Clock className="h-5 w-5 text-warning shrink-0" />
-              <span className="text-foreground">طلب اشتراك قيد المراجعة — في انتظار موافقة مالك المنصة</span>
-            </div>
-          ) : isAdmin ? (
-            <Button
-              className="w-full gap-2"
-              size="lg"
-              onClick={() => setShowPaymentForm(true)}
-              disabled={showPaymentForm}
-            >
-              <CreditCard className="h-5 w-5" />
-              {isActive ? "تجديد الاشتراك" : "اشترك الآن"}
-            </Button>
-          ) : null}
-        </CardContent>
-      </Card>
+      {/* Plan cards */}
+      <PlanCards
+        selectedPlanId={selectedPlan?.id ?? null}
+        onSelectPlan={handleSelectPlan}
+        hasPendingPayment={hasPendingPayment}
+        isAdmin={isAdmin ?? false}
+      />
 
       {/* Payment form */}
-      {showPaymentForm && (
-        <Card className="border-border/50">
+      {showPaymentForm && selectedPlan && (
+        <Card className="border-border/50" id="payment-form">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">الدفع عبر فودافون كاش</CardTitle>
+            <CardTitle className="text-base flex items-center justify-between">
+              <span>الدفع عبر فودافون كاش</span>
+              <Badge variant="outline" className="text-primary border-primary/30">
+                {selectedPlan.name} — {selectedPlan.price.toLocaleString()} جنيه
+              </Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-secondary/50 rounded-lg p-4 space-y-2">
               <p className="text-sm font-medium text-foreground">خطوات الدفع:</p>
               <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
                 <li>
-                  حوّل مبلغ <strong className="text-foreground">{PLAN_PRICE} جنيه</strong> إلى رقم فودافون كاش:
+                  حوّل مبلغ <strong className="text-foreground">{selectedPlan.price.toLocaleString()} جنيه</strong> إلى رقم فودافون كاش:
                 </li>
                 <li className="flex items-center gap-2 mr-4">
                   <Phone className="h-4 w-4 text-primary" />
@@ -276,22 +256,20 @@ export default function SubscriptionPage() {
 
             <div className="space-y-2">
               <Label>صورة إيصال التحويل</Label>
-              <div className="flex items-center gap-3">
-                <label className="flex-1 cursor-pointer">
-                  <div className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border/50 p-4 hover:border-primary/30 transition-colors">
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {screenshotFile ? screenshotFile.name : "اختر صورة"}
-                    </span>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
-                  />
-                </label>
-              </div>
+              <label className="block cursor-pointer">
+                <div className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border/50 p-4 hover:border-primary/30 transition-colors">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {screenshotFile ? screenshotFile.name : "اختر صورة"}
+                  </span>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
+                />
+              </label>
             </div>
 
             <div className="flex gap-3">
@@ -299,7 +277,7 @@ export default function SubscriptionPage() {
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 إرسال طلب الاشتراك
               </Button>
-              <Button variant="outline" onClick={() => setShowPaymentForm(false)}>
+              <Button variant="outline" onClick={() => { setShowPaymentForm(false); setSelectedPlan(null); }}>
                 إلغاء
               </Button>
             </div>
