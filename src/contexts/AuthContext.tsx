@@ -83,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccountStatus(null);
       setOrganizationId(null);
       setOrganizationName(null);
+      setIsOrgActive(true);
     }
   };
 
