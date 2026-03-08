@@ -310,11 +310,19 @@ export default function SubscriptionManager({ organizationId, organizationName }
         </div>
       )}
 
-      {/* Grant free subscription button */}
-      <Button variant="outline" className="w-full gap-2" onClick={() => setGrantOpen(true)}>
-        <Gift className="h-4 w-4" />
-        دفع اشتراك الشركة (مجاني)
-      </Button>
+      {/* Action buttons */}
+      <div className="space-y-2">
+        <Button variant="outline" className="w-full gap-2" onClick={() => setGrantOpen(true)}>
+          <Gift className="h-4 w-4" />
+          {isActive ? "تمديد الاشتراك (مجاني)" : "دفع اشتراك الشركة (مجاني)"}
+        </Button>
+        {isActive && (
+          <Button variant="destructive" className="w-full gap-2" onClick={handleCancelSubscription}>
+            <XCircle className="h-4 w-4" />
+            إلغاء الاشتراك
+          </Button>
+        )}
+      </div>
 
       {/* Grant dialog */}
       <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
