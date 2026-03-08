@@ -12,6 +12,7 @@ import UploadPage from "@/pages/UploadPage";
 import FilesPage from "@/pages/FilesPage";
 import ModerationPage from "@/pages/ModerationPage";
 import AdminTeamPage from "@/pages/AdminTeamPage";
+import AdminDashboard from "@/pages/AdminDashboard";
 import SettingsPage from "@/pages/SettingsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import NotFound from "@/pages/NotFound";
