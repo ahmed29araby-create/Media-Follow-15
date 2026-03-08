@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   CreditCard, Loader2, CheckCircle, XCircle, Clock,
-  Phone, Image as ImageIcon, Building2,
+  Phone, Image as ImageIcon, Building2, Lock,
 } from "lucide-react";
 
 interface PaymentRequest {
@@ -38,6 +40,11 @@ export default function AdminSubscriptionsPage() {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [viewingScreenshot, setViewingScreenshot] = useState(false);
 
+  // Password confirmation dialog
+  const [confirmAction, setConfirmAction] = useState<{ type: "approve" | "reject"; payment: PaymentRequest } | null>(null);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
   const fetchData = async () => {
     const [payRes, orgRes] = await Promise.all([
       supabase
@@ -56,10 +63,41 @@ export default function AdminSubscriptionsPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleApprove = async (payment: PaymentRequest) => {
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) return false;
+    const { error } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password,
+    });
+    return !error;
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction || !confirmPassword) return;
+    setConfirming(true);
+
+    const valid = await verifyPassword(confirmPassword);
+    if (!valid) {
+      toast.error("كلمة المرور غير صحيحة");
+      setConfirming(false);
+      return;
+    }
+
+    if (confirmAction.type === "approve") {
+      await executeApprove(confirmAction.payment);
+    } else {
+      await executeReject(confirmAction.payment);
+    }
+
+    setConfirmAction(null);
+    setConfirmPassword("");
+    setConfirming(false);
+  };
+
+  const executeApprove = async (payment: PaymentRequest) => {
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Check for existing active subscription
     const { data: existingSubs } = await supabase
       .from("subscriptions")
       .select("*")
@@ -73,7 +111,6 @@ export default function AdminSubscriptionsPage() {
     let subError: any = null;
 
     if (existingSub) {
-      // Extend existing subscription
       const newEnd = new Date(existingSub.ends_at);
       newEnd.setMonth(newEnd.getMonth() + payment.months);
       const { error } = await supabase
@@ -108,10 +145,8 @@ export default function AdminSubscriptionsPage() {
       .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
       .eq("id", payment.id);
 
-    // Re-activate org
     await supabase.from("organizations").update({ is_active: true }).eq("id", payment.organization_id);
 
-    // Send notification to org admin
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id")
@@ -137,14 +172,13 @@ export default function AdminSubscriptionsPage() {
     }
   };
 
-  const handleReject = async (payment: PaymentRequest) => {
+  const executeReject = async (payment: PaymentRequest) => {
     const { data: { user } } = await supabase.auth.getUser();
     await supabase
       .from("subscription_payments")
       .update({ status: "rejected", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
       .eq("id", payment.id);
 
-    // Send rejection notification
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id")
@@ -264,11 +298,11 @@ export default function AdminSubscriptionsPage() {
                 )}
                 {p.status === "pending" && (
                   <>
-                    <Button size="sm" className="gap-1.5 text-xs" onClick={() => handleApprove(p)}>
+                    <Button size="sm" className="gap-1.5 text-xs" onClick={() => setConfirmAction({ type: "approve", payment: p })}>
                       <CheckCircle className="h-3.5 w-3.5" />
                       موافقة وتفعيل
                     </Button>
-                    <Button variant="destructive" size="sm" className="gap-1.5 text-xs" onClick={() => handleReject(p)}>
+                    <Button variant="destructive" size="sm" className="gap-1.5 text-xs" onClick={() => setConfirmAction({ type: "reject", payment: p })}>
                       <XCircle className="h-3.5 w-3.5" />
                       رفض
                     </Button>
@@ -279,6 +313,47 @@ export default function AdminSubscriptionsPage() {
           ))}
         </div>
       )}
+
+      {/* Password confirmation dialog */}
+      <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) { setConfirmAction(null); setConfirmPassword(""); } }}>
+        <DialogContent className="bg-card border-border max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              {confirmAction?.type === "approve" ? "تأكيد الموافقة" : "تأكيد الرفض"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {confirmAction?.type === "approve"
+                ? <>سيتم الموافقة على طلب اشتراك <strong className="text-foreground">{confirmAction && orgs[confirmAction.payment.organization_id]?.name}</strong> وتفعيل الحساب.</>
+                : <>سيتم رفض طلب اشتراك <strong className="text-foreground">{confirmAction && orgs[confirmAction.payment.organization_id]?.name}</strong>.</>
+              }
+            </p>
+            <div className="space-y-2">
+              <Label>كلمة المرور</Label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="أدخل كلمة مرور حسابك"
+                onKeyDown={(e) => { if (e.key === "Enter" && confirmPassword) handleConfirmAction(); }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setConfirmAction(null); setConfirmPassword(""); }}>إلغاء</Button>
+            <Button
+              variant={confirmAction?.type === "reject" ? "destructive" : "default"}
+              onClick={handleConfirmAction}
+              disabled={confirming || !confirmPassword}
+            >
+              {confirming && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              {confirmAction?.type === "approve" ? "تأكيد الموافقة" : "تأكيد الرفض"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Screenshot viewer */}
       <Dialog open={viewingScreenshot} onOpenChange={(open) => { if (!open) { setViewingScreenshot(false); setScreenshotUrl(null); } }}>
