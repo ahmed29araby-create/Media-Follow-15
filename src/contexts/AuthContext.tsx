@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isOrgActive, setIsOrgActive] = useState(true);
+  const [disableReason, setDisableReason] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const sessionInitializedRef = useRef(false);
 
