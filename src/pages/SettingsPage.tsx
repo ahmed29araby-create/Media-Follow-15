@@ -8,13 +8,18 @@ import { toast } from "sonner";
 import { FolderOpen, Loader2, Link2, Unlink, Mail, CheckCircle2, Building2, Pencil } from "lucide-react";
 
 export default function SettingsPage() {
-  const { organizationId } = useAuth();
+  const { organizationId, organizationName } = useAuth();
   const [driveFolderPath, setDriveFolderPath] = useState("");
   const [saving, setSaving] = useState(false);
   const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Org editing
+  const [orgName, setOrgName] = useState("");
+  const [orgEmail, setOrgEmail] = useState("");
+  const [savingOrg, setSavingOrg] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -24,10 +29,20 @@ export default function SettingsPage() {
       ]);
       if (folderRes.data) setDriveFolderPath(folderRes.data.setting_value);
       if (emailRes.data) setConnectedEmail(emailRes.data.setting_value);
+
+      // Fetch org info
+      if (organizationId) {
+        const { data: orgData } = await supabase.from("organizations").select("name, email").eq("id", organizationId).single();
+        if (orgData) {
+          setOrgName(orgData.name);
+          setOrgEmail(orgData.email);
+        }
+      }
+
       setLoading(false);
     };
     fetchSettings();
-  }, []);
+  }, [organizationId]);
 
   const saveSetting = async (key: string, value: string) => {
     setSaving(true);
