@@ -81,13 +81,20 @@ export default function SuperAdminDashboard() {
       return;
     }
     setCreating(true);
-    const { data, error } = await supabase.functions.invoke("create-organization", { body: form });
+    const { data, error } = await supabase.functions.invoke("create-organization", {
+      body: {
+        org_name: form.org_name,
+        org_email: form.org_email,
+        admin_password: form.admin_password,
+        referral_code: form.referral_code.trim() || undefined,
+      },
+    });
     if (error || data?.error) {
       toast.error(data?.error || error?.message || "فشل إنشاء الشركة");
     } else {
       toast.success("تم إنشاء الشركة بنجاح!");
       setDialogOpen(false);
-      setForm({ org_name: "", org_email: "", admin_password: "" });
+      setForm({ org_name: "", org_email: "", admin_password: "", referral_code: "" });
       fetchOrgs();
     }
     setCreating(false);
