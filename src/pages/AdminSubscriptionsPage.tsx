@@ -12,6 +12,7 @@ import {
   CreditCard, Loader2, CheckCircle, XCircle, Clock,
   Phone, Image as ImageIcon, Building2, Lock,
 } from "lucide-react";
+import PlanManagement from "@/components/subscription/PlanManagement";
 
 interface PaymentRequest {
   id: string;

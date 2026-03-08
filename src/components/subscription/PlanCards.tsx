@@ -1,15 +1,17 @@
+import { useState, useEffect } from "react";
 import { CheckCircle, Crown, Star, Zap, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface Plan {
   id: number;
   name: string;
   nameEn: string;
   price: number;
-  maxMembers: number | null; // null = unlimited
+  maxMembers: number | null;
   features: string[];
   popular?: boolean;
   icon: React.ReactNode;
@@ -17,167 +19,54 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
-    id: 1,
-    name: "الأساسية",
-    nameEn: "Basic",
-    price: 400,
-    maxMembers: 5,
+    id: 1, name: "الأساسية", nameEn: "Basic", price: 400, maxMembers: 5,
     icon: <Zap className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 5 أعضاء",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 5 أعضاء"],
   },
   {
-    id: 2,
-    name: "الأساسية بلس",
-    nameEn: "Basic Plus",
-    price: 600,
-    maxMembers: 10,
+    id: 2, name: "الأساسية بلس", nameEn: "Basic Plus", price: 600, maxMembers: 10,
     icon: <Zap className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 10 أعضاء",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 10 أعضاء"],
   },
   {
-    id: 3,
-    name: "المعيارية",
-    nameEn: "Standard",
-    price: 800,
-    maxMembers: 20,
+    id: 3, name: "المعيارية", nameEn: "Standard", price: 800, maxMembers: 20,
     icon: <Star className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 20 عضو",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 20 عضو"],
   },
   {
-    id: 4,
-    name: "المعيارية بلس",
-    nameEn: "Standard Plus",
-    price: 1000,
-    maxMembers: 35,
-    icon: <Star className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 35 عضو",
-    ],
-    popular: true,
+    id: 4, name: "المعيارية بلس", nameEn: "Standard Plus", price: 1000, maxMembers: 35,
+    icon: <Star className="h-5 w-5" />, popular: true,
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 35 عضو"],
   },
   {
-    id: 5,
-    name: "الاحترافية",
-    nameEn: "Professional",
-    price: 1500,
-    maxMembers: 50,
+    id: 5, name: "الاحترافية", nameEn: "Professional", price: 1500, maxMembers: 50,
     icon: <Crown className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 50 عضو",
-      "دعم فني أولوية",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 50 عضو", "دعم فني أولوية"],
   },
   {
-    id: 6,
-    name: "الاحترافية بلس",
-    nameEn: "Pro Plus",
-    price: 2000,
-    maxMembers: 75,
+    id: 6, name: "الاحترافية بلس", nameEn: "Pro Plus", price: 2000, maxMembers: 75,
     icon: <Crown className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 75 عضو",
-      "دعم فني أولوية",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 75 عضو", "دعم فني أولوية"],
   },
   {
-    id: 7,
-    name: "الأعمال",
-    nameEn: "Business",
-    price: 2500,
-    maxMembers: 100,
+    id: 7, name: "الأعمال", nameEn: "Business", price: 2500, maxMembers: 100,
     icon: <Users className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 100 عضو",
-      "دعم فني أولوية",
-      "تقارير متقدمة",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 100 عضو", "دعم فني أولوية", "تقارير متقدمة"],
   },
   {
-    id: 8,
-    name: "الأعمال بلس",
-    nameEn: "Business Plus",
-    price: 3000,
-    maxMembers: 150,
+    id: 8, name: "الأعمال بلس", nameEn: "Business Plus", price: 3000, maxMembers: 150,
     icon: <Users className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 150 عضو",
-      "دعم فني أولوية",
-      "تقارير متقدمة",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 150 عضو", "دعم فني أولوية", "تقارير متقدمة"],
   },
   {
-    id: 9,
-    name: "المؤسسية",
-    nameEn: "Enterprise",
-    price: 4000,
-    maxMembers: 200,
+    id: 9, name: "المؤسسية", nameEn: "Enterprise", price: 4000, maxMembers: 200,
     icon: <Crown className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة حتى 200 عضو",
-      "دعم فني أولوية",
-      "تقارير متقدمة",
-      "مدير حساب مخصص",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة حتى 200 عضو", "دعم فني أولوية", "تقارير متقدمة", "مدير حساب مخصص"],
   },
   {
-    id: 10,
-    name: "المؤسسية بلس",
-    nameEn: "Enterprise Plus",
-    price: 5000,
-    maxMembers: null,
+    id: 10, name: "المؤسسية بلس", nameEn: "Enterprise Plus", price: 5000, maxMembers: null,
     icon: <Crown className="h-5 w-5" />,
-    features: [
-      "إدارة كاملة للفريق والملفات",
-      "رفع ومراجعة الملفات",
-      "مزامنة مع Google Drive",
-      "إشعارات فورية",
-      "إضافة أعضاء غير محدود",
-      "دعم فني أولوية",
-      "تقارير متقدمة",
-      "مدير حساب مخصص",
-    ],
+    features: ["إدارة كاملة للفريق والملفات", "رفع ومراجعة الملفات", "مزامنة مع Google Drive", "إشعارات فورية", "إضافة أعضاء غير محدود", "دعم فني أولوية", "تقارير متقدمة", "مدير حساب مخصص"],
   },
 ];
 
@@ -189,12 +78,31 @@ interface PlanCardsProps {
 }
 
 export default function PlanCards({ selectedPlanId, onSelectPlan, hasPendingPayment, isAdmin }: PlanCardsProps) {
+  const [priceOverrides, setPriceOverrides] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    supabase
+      .from("admin_settings")
+      .select("setting_value")
+      .eq("setting_key", "plan_prices")
+      .is("organization_id", null)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          try { setPriceOverrides(JSON.parse(data.setting_value)); } catch {}
+        }
+      });
+  }, []);
+
+  const getPrice = (plan: Plan) => priceOverrides[plan.id] ?? plan.price;
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold text-foreground">اختر الباقة المناسبة</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {PLANS.map((plan) => {
           const isSelected = selectedPlanId === plan.id;
+          const displayPrice = getPrice(plan);
           return (
             <Card
               key={plan.id}
@@ -204,7 +112,7 @@ export default function PlanCards({ selectedPlanId, onSelectPlan, hasPendingPaym
                 isSelected && "ring-2 ring-primary border-primary/50 shadow-lg",
                 plan.popular && "border-primary/40"
               )}
-              onClick={() => !hasPendingPayment && isAdmin && onSelectPlan(plan)}
+              onClick={() => !hasPendingPayment && isAdmin && onSelectPlan({ ...plan, price: displayPrice })}
             >
               {plan.popular && (
                 <div className="absolute top-0 left-0 right-0 bg-primary text-primary-foreground text-center text-xs font-bold py-1">
@@ -220,7 +128,7 @@ export default function PlanCards({ selectedPlanId, onSelectPlan, hasPendingPaym
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-primary">{plan.price.toLocaleString()}</span>
+                  <span className="text-3xl font-black text-primary">{displayPrice.toLocaleString()}</span>
                   <span className="text-xs text-muted-foreground">جنيه / شهر</span>
                 </div>
 
@@ -249,7 +157,7 @@ export default function PlanCards({ selectedPlanId, onSelectPlan, hasPendingPaym
                     )}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSelectPlan(plan);
+                      onSelectPlan({ ...plan, price: displayPrice });
                     }}
                   >
                     {isSelected ? "✓ تم الاختيار" : "اختر هذه الباقة"}
