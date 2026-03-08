@@ -16,10 +16,6 @@ export default function SettingsPage() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Org editing
-  const [orgName, setOrgName] = useState("");
-  const [orgEmail, setOrgEmail] = useState("");
-  const [savingOrg, setSavingOrg] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
