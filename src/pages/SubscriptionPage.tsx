@@ -69,6 +69,10 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     fetchData();
+    // Fetch vodafone number setting
+    supabase.from("admin_settings").select("setting_value").eq("setting_key", "vodafone_cash_number").maybeSingle().then(({ data }) => {
+      if (data) setVodafoneNumber(data.setting_value);
+    });
   }, [organizationId]);
 
   const isActive = subscription && new Date(subscription.ends_at) > new Date();
