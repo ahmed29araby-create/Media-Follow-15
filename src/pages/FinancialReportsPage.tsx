@@ -86,8 +86,16 @@ export default function FinancialReportsPage() {
     { name: "مجاني (من المالك)", value: freeSubs.length, color: "hsl(var(--muted-foreground))" },
   ].filter(d => d.value > 0);
 
-  // Recent subscriptions
-  const recentSubs = filteredSubs.slice(0, 10);
+  // Recent subscriptions — show only the latest per organization
+  const uniqueOrgSubs: Subscription[] = [];
+  const seenOrgs = new Set<string>();
+  for (const s of filteredSubs) {
+    if (!seenOrgs.has(s.organization_id)) {
+      seenOrgs.add(s.organization_id);
+      uniqueOrgSubs.push(s);
+    }
+  }
+  const recentSubs = uniqueOrgSubs.slice(0, 10);
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" });

@@ -97,39 +97,95 @@ export default function SubscriptionManager({ organizationId, organizationName }
     if (!user) return;
     setGranting(true);
     const months = parseInt(grantMonths);
-    const startsAt = new Date();
-    const endsAt = new Date();
-    endsAt.setMonth(endsAt.getMonth() + months);
 
-    const { error } = await supabase.from("subscriptions").insert({
-      organization_id: organizationId,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
-      months,
-      amount: 0,
-      granted_by: user.id,
-      payment_method: "free_grant",
-      notes: `تم الدفع من صاحب الموقع لمدة ${months} شهر`,
-    });
+    let error: any = null;
+
+    if (subscription && new Date(subscription.ends_at) > new Date()) {
+      // Active subscription exists — extend it
+      const newEnd = new Date(subscription.ends_at);
+      newEnd.setMonth(newEnd.getMonth() + months);
+      const { error: updateErr } = await supabase
+        .from("subscriptions")
+        .update({
+          ends_at: newEnd.toISOString(),
+          months: subscription.months + months,
+          notes: `${subscription.notes || ""}\n+ تمديد ${months} شهر مجاني من صاحب الموقع`,
+        })
+        .eq("id", subscription.id);
+      error = updateErr;
+    } else {
+      // No active subscription — create new
+      const startsAt = new Date();
+      const endsAt = new Date();
+      endsAt.setMonth(endsAt.getMonth() + months);
+      const { error: insertErr } = await supabase.from("subscriptions").insert({
+        organization_id: organizationId,
+        starts_at: startsAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+        months,
+        amount: 0,
+        granted_by: user.id,
+        payment_method: "free_grant",
+        notes: `تم الدفع من صاحب الموقع لمدة ${months} شهر`,
+      });
+      error = insertErr;
+    }
+
+    // Re-activate org
+    await supabase.from("organizations").update({ is_active: true }).eq("id", organizationId);
 
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success(`تم تفعيل الاشتراك المجاني لمدة ${months} شهر`);
+      toast.success(subscription && new Date(subscription.ends_at) > new Date()
+        ? `تم تمديد الاشتراك بـ ${months} شهر إضافي`
+        : `تم تفعيل الاشتراك المجاني لمدة ${months} شهر`);
       setGrantOpen(false);
       fetchData();
     }
     setGranting(false);
   };
 
-  const handleApprovePayment = async (payment: PaymentRequest) => {
-    const startsAt = new Date();
-    const endsAt = new Date();
-    endsAt.setMonth(endsAt.getMonth() + payment.months);
+  const handleCancelSubscription = async () => {
+    if (!subscription) return;
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ ends_at: new Date().toISOString(), notes: `${subscription.notes || ""}\n⛔ تم إلغاء الاشتراك يدوياً` })
+      .eq("id", subscription.id);
 
-    // Create subscription + update payment status
-    const [subErr, payErr] = await Promise.all([
-      supabase.from("subscriptions").insert({
+    await supabase.from("organizations").update({ is_active: false }).eq("id", organizationId);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("تم إلغاء الاشتراك بنجاح");
+      fetchData();
+    }
+  };
+
+  const handleApprovePayment = async (payment: PaymentRequest) => {
+    let subError: any = null;
+    const note = `تم الدفع عبر فودافون كاش — رقم المرسل: ${payment.sender_phone || "غير محدد"}`;
+
+    if (subscription && new Date(subscription.ends_at) > new Date()) {
+      // Extend existing active subscription
+      const newEnd = new Date(subscription.ends_at);
+      newEnd.setMonth(newEnd.getMonth() + payment.months);
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          ends_at: newEnd.toISOString(),
+          months: subscription.months + payment.months,
+          amount: Number(subscription.amount) + payment.amount,
+          notes: `${subscription.notes || ""}\n+ تجديد ${payment.months} شهر — ${note}`,
+        })
+        .eq("id", subscription.id);
+      subError = error;
+    } else {
+      const startsAt = new Date();
+      const endsAt = new Date();
+      endsAt.setMonth(endsAt.getMonth() + payment.months);
+      const { error } = await supabase.from("subscriptions").insert({
         organization_id: payment.organization_id,
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
@@ -137,18 +193,20 @@ export default function SubscriptionManager({ organizationId, organizationName }
         amount: payment.amount,
         granted_by: user?.id,
         payment_method: "vodafone_cash",
-        notes: `تم الدفع عبر فودافون كاش — رقم المرسل: ${payment.sender_phone || "غير محدد"}`,
-      }),
-      supabase
-        .from("subscription_payments")
-        .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
-        .eq("id", payment.id),
-    ]);
+        notes: note,
+      });
+      subError = error;
+    }
+
+    await supabase
+      .from("subscription_payments")
+      .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
+      .eq("id", payment.id);
 
     // Re-activate org
     await supabase.from("organizations").update({ is_active: true }).eq("id", payment.organization_id);
 
-    if (subErr.error || payErr.error) {
+    if (subError) {
       toast.error("حدث خطأ أثناء الموافقة");
     } else {
       toast.success("تم تفعيل الاشتراك بنجاح");
@@ -252,11 +310,19 @@ export default function SubscriptionManager({ organizationId, organizationName }
         </div>
       )}
 
-      {/* Grant free subscription button */}
-      <Button variant="outline" className="w-full gap-2" onClick={() => setGrantOpen(true)}>
-        <Gift className="h-4 w-4" />
-        دفع اشتراك الشركة (مجاني)
-      </Button>
+      {/* Action buttons */}
+      <div className="space-y-2">
+        <Button variant="outline" className="w-full gap-2" onClick={() => setGrantOpen(true)}>
+          <Gift className="h-4 w-4" />
+          {isActive ? "تمديد الاشتراك (مجاني)" : "دفع اشتراك الشركة (مجاني)"}
+        </Button>
+        {isActive && (
+          <Button variant="destructive" className="w-full gap-2" onClick={handleCancelSubscription}>
+            <XCircle className="h-4 w-4" />
+            إلغاء الاشتراك
+          </Button>
+        )}
+      </div>
 
       {/* Grant dialog */}
       <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
