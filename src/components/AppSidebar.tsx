@@ -19,7 +19,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const superAdminLinks = [
   { to: "/dashboard", label: "لوحة تحكم الموقع", icon: Globe },
-  { to: "/admin-dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
   { to: "/settings", label: "الإعدادات", icon: Settings },
   { to: "/privacy", label: "الخصوصية", icon: ShieldCheck },
 ];
