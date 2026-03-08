@@ -156,48 +156,33 @@ export default function SuperAdminDashboard() {
                 <DialogTitle className="text-foreground">إنشاء شركة جديدة</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="glass-panel p-4 space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-primary" /> بيانات الشركة
-                  </h3>
-                  <div className="space-y-2">
-                    <Label>اسم الشركة</Label>
-                    <Input value={form.org_name} onChange={e => setForm(f => ({ ...f, org_name: e.target.value }))} placeholder="Star Media" dir="ltr" className="text-left" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>بريد الشركة</Label>
-                    <Input value={form.org_email} onChange={e => setForm(f => ({ ...f, org_email: e.target.value }))} placeholder="info@company.com" dir="ltr" className="text-left" type="email" />
+                <div className="space-y-2">
+                  <Label>اسم الشركة</Label>
+                  <Input value={form.org_name} onChange={e => setForm(f => ({ ...f, org_name: e.target.value }))} placeholder="Star Media" dir="ltr" className="text-left" />
+                </div>
+                <div className="space-y-2">
+                  <Label>البريد الإلكتروني</Label>
+                  <Input value={form.org_email} onChange={e => setForm(f => ({ ...f, org_email: e.target.value }))} placeholder="info@company.com" dir="ltr" className="text-left" type="email" />
+                </div>
+                <div className="space-y-2">
+                  <Label>كلمة المرور (12 حرف على الأقل)</Label>
+                  <div className="relative">
+                    <Input
+                      value={form.admin_password}
+                      onChange={e => setForm(f => ({ ...f, admin_password: e.target.value }))}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••••••"
+                      dir="ltr" className="text-left pr-10"
+                      minLength={12}
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
-                <div className="glass-panel p-4 space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" /> بيانات المسؤول
-                  </h3>
-                  <div className="space-y-2">
-                    <Label>اسم المسؤول</Label>
-                    <Input value={form.admin_display_name} onChange={e => setForm(f => ({ ...f, admin_display_name: e.target.value }))} placeholder="أحمد محمد" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>بريد المسؤول</Label>
-                    <Input value={form.admin_email} onChange={e => setForm(f => ({ ...f, admin_email: e.target.value }))} placeholder="admin@company.com" dir="ltr" className="text-left" type="email" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>كلمة المرور (12 حرف على الأقل)</Label>
-                    <div className="relative">
-                      <Input
-                        value={form.admin_password}
-                        onChange={e => setForm(f => ({ ...f, admin_password: e.target.value }))}
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••••••"
-                        dir="ltr" className="text-left pr-10"
-                        minLength={12}
-                      />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-xs text-muted-foreground bg-secondary/50 p-3 rounded-lg">
+                  بعد الإنشاء، أرسل البريد الإلكتروني وكلمة المرور لمسؤول الشركة لتسجيل الدخول.
+                </p>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
