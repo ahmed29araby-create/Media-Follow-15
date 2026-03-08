@@ -227,33 +227,44 @@ export default function SuperAdminDashboard() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
-            الشركات المسجلة
+            {filterTitle}
           </h2>
-          <span className="text-xs text-muted-foreground">{orgs.length} شركة</span>
+          <span className="text-xs text-muted-foreground">{filteredOrgs.length} شركة</span>
         </div>
         {loading ? (
           <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : orgs.length === 0 ? (
+        ) : filteredOrgs.length === 0 ? (
           <div className="glass-panel p-12 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mx-auto mb-4">
               <Building2 className="h-8 w-8 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground mb-4">لا توجد شركات بعد — ابدأ بإنشاء أول شركة</p>
-            <Button onClick={() => setDialogOpen(true)} variant="outline">
-              <Plus className="ml-2 h-4 w-4" />
-              إنشاء شركة
-            </Button>
+            <p className="text-sm text-muted-foreground mb-4">
+              {filter === "all" ? "لا توجد شركات بعد — ابدأ بإنشاء أول شركة" : filter === "active" ? "لا توجد شركات نشطة" : "لا توجد شركات معطلة"}
+            </p>
+            {filter === "all" && (
+              <Button onClick={() => setDialogOpen(true)} variant="outline">
+                <Plus className="ml-2 h-4 w-4" />
+                إنشاء شركة
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid gap-3">
-            {orgs.map((org, i) => (
+            {filteredOrgs.map((org, i) => (
               <div key={org.id} className="glass-panel p-5 flex items-center justify-between hover:border-primary/20 transition-all group" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
                     <Building2 className="h-6 w-6 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">{org.name}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-foreground">{org.name}</p>
+                      {org.is_active ? (
+                        <Badge className="bg-success/15 text-success border-success/30 text-[10px] px-1.5 py-0">نشطة</Badge>
+                      ) : (
+                        <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px] px-1.5 py-0">معطلة</Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground" dir="ltr">{org.email}</p>
                   </div>
                 </div>
