@@ -395,6 +395,31 @@ export default function SubscriptionManager({ organizationId, organizationName }
         </DialogContent>
       </Dialog>
 
+      {/* Cancel confirmation dialog */}
+      <Dialog open={cancelOpen} onOpenChange={(open) => { if (!open) { setCancelOpen(false); setCancelPassword(""); } }}>
+        <DialogContent className="bg-card border-border max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">تأكيد إلغاء الاشتراك</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              سيتم إلغاء اشتراك <strong className="text-foreground">{organizationName}</strong> وإيقاف الحساب. أدخل كلمة المرور للتأكيد.
+            </p>
+            <div className="space-y-2">
+              <Label>كلمة المرور</Label>
+              <Input type="password" value={cancelPassword} onChange={(e) => setCancelPassword(e.target.value)} placeholder="أدخل كلمة مرور حسابك" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelOpen(false); setCancelPassword(""); }}>إلغاء</Button>
+            <Button variant="destructive" onClick={handleCancelSubscription} disabled={cancelling || !cancelPassword}>
+              {cancelling && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              تأكيد الإلغاء
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Screenshot viewer */}
       <Dialog open={!!viewingScreenshot} onOpenChange={(open) => { if (!open) { setViewingScreenshot(null); setScreenshotUrl(null); } }}>
         <DialogContent className="bg-card border-border max-w-lg">
