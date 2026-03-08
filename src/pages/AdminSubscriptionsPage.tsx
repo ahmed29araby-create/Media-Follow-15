@@ -313,6 +313,9 @@ export default function AdminSubscriptionsPage() {
       {/* Plan Management Section */}
       <PlanManagement />
 
+      {/* Referral Settings */}
+      <ReferralSettings />
+
       {/* Filter tabs */}
       <div className="flex gap-2 flex-wrap">
         {([
