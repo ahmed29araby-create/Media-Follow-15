@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+    const clientId = Deno.env.get("GOOGLE_CLIENT_ID")?.trim();
+    console.log("Using client ID prefix:", clientId?.substring(0, 10));
     if (!clientId) {
       return new Response(JSON.stringify({ error: "Google Client ID not configured" }), {
         status: 500,
