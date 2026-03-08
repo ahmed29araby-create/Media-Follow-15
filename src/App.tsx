@@ -69,6 +69,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/*" element={<ProtectedRoutes />} />
     </Routes>
   );
 }
