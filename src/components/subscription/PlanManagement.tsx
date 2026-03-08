@@ -55,6 +55,49 @@ export default function PlanManagement() {
     }
   };
 
+  const loadHiddenPlans = async () => {
+    const { data } = await supabase
+      .from("admin_settings")
+      .select("setting_value")
+      .eq("setting_key", "hidden_plans")
+      .is("organization_id", null)
+      .maybeSingle();
+    if (data) {
+      try { setHiddenPlans(JSON.parse(data.setting_value)); } catch {}
+    }
+  };
+
+  const saveHiddenPlans = async (newHidden: number[]) => {
+    const value = JSON.stringify(newHidden);
+    const { data: existing } = await supabase
+      .from("admin_settings")
+      .select("id")
+      .eq("setting_key", "hidden_plans")
+      .is("organization_id", null)
+      .maybeSingle();
+
+    let error;
+    if (existing) {
+      ({ error } = await supabase.from("admin_settings").update({ setting_value: value }).eq("id", existing.id));
+    } else {
+      ({ error } = await supabase.from("admin_settings").insert({ setting_key: "hidden_plans", setting_value: value, organization_id: null }));
+    }
+
+    if (error) {
+      toast.error("حدث خطأ أثناء الحفظ");
+    } else {
+      setHiddenPlans(newHidden);
+      toast.success(newHidden.length > hiddenPlans.length ? "تم إخفاء الباقة" : "تم إظهار الباقة");
+    }
+  };
+
+  const togglePlanVisibility = (planId: number) => {
+    const newHidden = hiddenPlans.includes(planId)
+      ? hiddenPlans.filter(id => id !== planId)
+      : [...hiddenPlans, planId];
+    saveHiddenPlans(newHidden);
+  };
+
   const getPrice = (plan: Plan) => prices[plan.id] ?? plan.price;
 
   const savePrices = async (newPrices: PlanPriceOverride) => {
