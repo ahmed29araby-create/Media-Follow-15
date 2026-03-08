@@ -6,69 +6,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-interface GoogleServiceAccount {
-  client_email: string;
-  private_key: string;
-  token_uri: string;
-}
+async function getAccessTokenFromRefreshToken(refreshToken: string): Promise<string> {
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID")!;
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 
-async function getAccessToken(sa: GoogleServiceAccount): Promise<string> {
-  const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const now = Math.floor(Date.now() / 1000);
-  const claimSet = btoa(
-    JSON.stringify({
-      iss: sa.client_email,
-      scope: "https://www.googleapis.com/auth/drive.file",
-      aud: sa.token_uri,
-      exp: now + 3600,
-      iat: now,
-    })
-  );
-
-  const signInput = `${header}.${claimSet}`;
-
-  // Import the private key
-  const pemContents = sa.private_key
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
-    .replace(/\n/g, "");
-
-  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    cryptoKey,
-    new TextEncoder().encode(signInput)
-  );
-
-  const sig = btoa(String.fromCharCode(...new Uint8Array(signature)));
-  const jwt = `${signInput}.${sig}`;
-
-  const tokenRes = await fetch(sa.token_uri, {
+  const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
   });
 
-  const tokenData = await tokenRes.json();
-  if (!tokenData.access_token) {
-    throw new Error(`Failed to get access token: ${JSON.stringify(tokenData)}`);
+  const data = await res.json();
+  if (!data.access_token) {
+    throw new Error(`Failed to refresh access token: ${JSON.stringify(data)}`);
   }
-  return tokenData.access_token;
+  return data.access_token;
 }
 
-async function findOrCreateFolder(
-  accessToken: string,
-  folderPath: string
-): Promise<string> {
+async function findOrCreateFolder(accessToken: string, folderPath: string): Promise<string> {
   const parts = folderPath.split("/").filter(Boolean);
   let parentId = "root";
 
@@ -83,22 +43,18 @@ async function findOrCreateFolder(
     if (searchData.files && searchData.files.length > 0) {
       parentId = searchData.files[0].id;
     } else {
-      // Create folder
-      const createRes = await fetch(
-        "https://www.googleapis.com/drive/v3/files",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: part,
-            mimeType: "application/vnd.google-apps.folder",
-            parents: [parentId],
-          }),
-        }
-      );
+      const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: part,
+          mimeType: "application/vnd.google-apps.folder",
+          parents: [parentId],
+        }),
+      });
       const createData = await createRes.json();
       parentId = createData.id;
     }
@@ -113,16 +69,9 @@ async function uploadFileToDrive(
   fileName: string,
   fileData: Blob
 ): Promise<{ id: string; name: string }> {
-  const metadata = {
-    name: fileName,
-    parents: [folderId],
-  };
-
+  const metadata = { name: fileName, parents: [folderId] };
   const form = new FormData();
-  form.append(
-    "metadata",
-    new Blob([JSON.stringify(metadata)], { type: "application/json" })
-  );
+  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
   form.append("file", fileData);
 
   const res = await fetch(
@@ -138,7 +87,6 @@ async function uploadFileToDrive(
     const err = await res.text();
     throw new Error(`Drive upload failed: ${err}`);
   }
-
   return await res.json();
 }
 
@@ -160,7 +108,6 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const serviceClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify user is admin
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -215,7 +162,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get drive folder path from settings
+    // Get refresh token from admin settings
+    const { data: tokenData } = await serviceClient
+      .from("admin_settings")
+      .select("setting_value")
+      .eq("setting_key", "google_drive_refresh_token")
+      .single();
+
+    if (!tokenData?.setting_value) {
+      return new Response(
+        JSON.stringify({ error: "Google Drive not connected. Please connect Google Drive from Settings." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get drive folder path
     const { data: settingData } = await serviceClient
       .from("admin_settings")
       .select("setting_value")
@@ -236,21 +197,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Google Drive upload
-    const saJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
-    if (!saJson) {
-      return new Response(JSON.stringify({ error: "Google Service Account not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const sa: GoogleServiceAccount = JSON.parse(saJson);
-    const accessToken = await getAccessToken(sa);
+    // Get access token using refresh token
+    const accessToken = await getAccessTokenFromRefreshToken(tokenData.setting_value);
     const folderId = await findOrCreateFolder(accessToken, driveFolderPath);
     const driveFile = await uploadFileToDrive(accessToken, folderId, fileRecord.file_name, fileBlob);
 
-    // Update file record with drive path
+    // Update file record
     await serviceClient
       .from("files")
       .update({

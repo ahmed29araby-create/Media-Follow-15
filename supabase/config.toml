@@ -2,3 +2,9 @@ project_id = "iwpkmpvlestnrilwaakn"
 
 [functions.sync-to-drive]
 verify_jwt = false
+
+[functions.google-drive-auth]
+verify_jwt = false
+
+[functions.google-drive-callback]
+verify_jwt = false
