@@ -203,13 +203,14 @@ export default function SubscriptionManager({ organizationId, organizationName }
       // Extend existing active subscription
       const newEnd = new Date(subscription.ends_at);
       newEnd.setMonth(newEnd.getMonth() + payment.months);
+      const totalMonths = subscription.months + payment.months;
       const { error } = await supabase
         .from("subscriptions")
         .update({
           ends_at: newEnd.toISOString(),
-          months: subscription.months + payment.months,
+          months: totalMonths,
           amount: Number(subscription.amount) + payment.amount,
-          notes: `${subscription.notes || ""}\n+ تجديد ${payment.months} شهر — ${note}`,
+          notes: `تم دفع الاشتراك عبر فودافون كاش لمدة ${totalMonths} شهر — رقم المرسل: ${payment.sender_phone || "غير محدد"}`,
         })
         .eq("id", subscription.id);
       subError = error;
