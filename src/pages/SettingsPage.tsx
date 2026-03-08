@@ -78,9 +78,9 @@ export default function SettingsPage() {
   if (loading) return <div className="p-6 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
   return (
-    <div className="p-6 max-w-2xl space-y-6" dir="rtl">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
+    <div className="p-6 max-w-2xl mx-auto space-y-6" dir="rtl">
+      <div className="text-center space-y-1 pb-4 border-b border-border">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>الإعدادات</h1>
         <p className="text-sm text-muted-foreground">إعدادات الشركة والتكامل</p>
       </div>
 
@@ -90,7 +90,7 @@ export default function SettingsPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><Link2 className="h-4 w-4 text-primary" /></div>
           <div>
             <h2 className="text-sm font-semibold text-foreground">اتصال Google Drive</h2>
-            <p className="text-xs text-muted-foreground">ربط حساب Google Drive لمزامنة الملفات</p>
+            
           </div>
         </div>
 

@@ -90,9 +90,9 @@ export default function ModerationPage() {
   };
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">لوحة المراجعة</h1>
+    <div className="p-6 max-w-2xl mx-auto space-y-6" dir="rtl">
+      <div className="text-center space-y-1 pb-4 border-b border-border">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>لوحة المراجعة</h1>
         <p className="text-sm text-muted-foreground">مراجعة والموافقة على الإجراءات المعلقة</p>
       </div>
 
