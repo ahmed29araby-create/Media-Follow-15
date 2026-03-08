@@ -77,6 +77,10 @@ export default function PrivacyPage() {
       });
   }, [organizationId]);
 
+  useEffect(() => {
+    if (displayName) setEditDisplayName(displayName);
+  }, [displayName]);
+
   const saveOrgInfo = async () => {
     if (!editOrgName.trim()) { toast.error("اسم الشركة مطلوب", { id: "org-name-required" }); return; }
     if (editOrgName.trim() === orgName) return; // no changes
