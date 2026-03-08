@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accountStatus, setAccountStatus] = useState<string | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const sessionInitializedRef = useRef(false);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -83,39 +84,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    const applySession = (nextSession: Session | null) => {
+      if (!mounted) return;
+
+      setSession(nextSession);
+      const nextUser = nextSession?.user ?? null;
+      setUser(nextUser);
+
+      if (!nextUser) {
+        setRole(null);
+        setAccountStatus(null);
+        setOrganizationId(null);
+        setOrganizationName(null);
+        setLoading(false);
+        return;
+      }
+
+      void fetchUserData(nextUser.id).finally(() => {
+        if (mounted) setLoading(false);
+      });
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (!mounted) return;
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(async () => {
-            if (!mounted) return;
-            await fetchUserData(session.user.id);
-            if (mounted) setLoading(false);
-          }, 0);
-        } else {
-          setRole(null);
-          setAccountStatus(null);
-          setOrganizationId(null);
-          setOrganizationName(null);
-          setLoading(false);
-        }
+      (event, nextSession) => {
+        if (!sessionInitializedRef.current && event === "INITIAL_SESSION") return;
+        if (!sessionInitializedRef.current) sessionInitializedRef.current = true;
+        applySession(nextSession);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user.id).finally(() => {
-          if (mounted) setLoading(false);
-        });
-      } else {
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session: initialSession } }) => {
+        sessionInitializedRef.current = true;
+        applySession(initialSession);
+      })
+      .catch(() => {
+        sessionInitializedRef.current = true;
+        if (!mounted) return;
+        setSession(null);
+        setUser(null);
+        setRole(null);
+        setAccountStatus(null);
+        setOrganizationId(null);
+        setOrganizationName(null);
         setLoading(false);
-      }
-    });
+      });
 
     return () => {
       mounted = false;

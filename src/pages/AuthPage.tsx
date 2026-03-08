@@ -15,24 +15,34 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) navigate("/dashboard", { replace: true });
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+
     if (isSignUp && password.length < 12) {
       toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل");
       return;
     }
+
     setLoading(true);
 
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
-          data: { display_name: displayName || email.split("@")[0] },
+          data: { display_name: displayName || normalizedEmail.split("@")[0] },
           emailRedirectTo: window.location.origin,
         },
       });
+
       if (error) {
         toast.error(
           error.message === "User already registered"
@@ -43,15 +53,30 @@ export default function AuthPage() {
         toast.success("تم إنشاء الحساب! تحقق من بريدك الإلكتروني لتأكيد الحساب.");
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+
       if (error) {
-        toast.error(
-          error.message === "Invalid login credentials"
-            ? "بيانات الدخول غير صحيحة (راجع البريد وكلمة المرور)"
-            : error.message
-        );
+        const { data: { session } } = await supabase.auth.getSession();
+        const alreadySignedIn = session?.user?.email?.toLowerCase() === normalizedEmail;
+
+        if (alreadySignedIn) {
+          toast.success("أنت مسجل دخول بالفعل");
+          navigate("/dashboard", { replace: true });
+        } else {
+          toast.error(
+            error.message === "Invalid login credentials"
+              ? "بيانات الدخول غير صحيحة (راجع البريد وكلمة المرور)"
+              : error.message
+          );
+        }
+      } else {
+        navigate("/dashboard", { replace: true });
       }
     }
+
     setLoading(false);
   };
 
