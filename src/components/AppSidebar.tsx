@@ -13,6 +13,7 @@ import {
   Globe,
   PanelLeft,
   CreditCard,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";

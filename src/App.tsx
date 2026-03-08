@@ -72,6 +72,7 @@ function ProtectedRoutes() {
         {(isAdmin || isSuperAdmin) && <Route path="/settings" element={<SettingsPage />} />}
         {isSuperAdmin && <Route path="/admin-dashboard" element={<AdminDashboard />} />}
         {isSuperAdmin && <Route path="/admin-subscriptions" element={<AdminSubscriptionsPage />} />}
+        {isSuperAdmin && <Route path="/financial-reports" element={<FinancialReportsPage />} />}
         <Route path="/privacy" element={<PrivacyPage />} />
         {isAdmin && <Route path="/subscription" element={<SubscriptionPage />} />}
 
