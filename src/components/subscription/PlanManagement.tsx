@@ -239,13 +239,15 @@ export default function PlanManagement() {
               const currentPrice = getPrice(plan);
               const isEditing = editingPlanId === plan.id;
               const isChanged = prices[plan.id] !== undefined && prices[plan.id] !== plan.price;
+              const isHidden = hiddenPlans.includes(plan.id);
 
               return (
                 <Card
                   key={plan.id}
                   className={cn(
                     "relative overflow-hidden border-border/50 transition-all",
-                    isChanged && "border-primary/40"
+                    isChanged && "border-primary/40",
+                    isHidden && "opacity-50"
                   )}
                 >
                   {plan.popular && (
