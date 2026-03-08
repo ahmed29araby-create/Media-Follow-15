@@ -261,11 +261,18 @@ export default function PlanManagement() {
                         <span className="text-primary">{plan.icon}</span>
                         <CardTitle className="text-xs font-bold">{plan.name}</CardTitle>
                       </div>
-                      {isChanged && (
-                        <Badge variant="outline" className="text-[9px] px-1 py-0 text-primary border-primary/30">
-                          معدّل
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {isChanged && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 text-primary border-primary/30">
+                            معدّل
+                          </Badge>
+                        )}
+                        {isHidden && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 text-destructive border-destructive/30">
+                            مخفية
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2 pb-3">
