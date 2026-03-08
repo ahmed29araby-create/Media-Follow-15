@@ -13,6 +13,7 @@ type AuthStep = "login" | "signup" | "forgot-email" | "forgot-otp" | "forgot-new
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 60;
+const OTP_EXPIRY_SECONDS = 300;
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
@@ -24,12 +25,15 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<AuthStep>("login");
   const [otpCode, setOtpCode] = useState("");
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
+  const [otpRemaining, setOtpRemaining] = useState(0);
 
   // Brute-force protection
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
   const [lockoutRemaining, setLockoutRemaining] = useState(0);
   const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const otpTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -55,8 +59,37 @@ export default function AuthPage() {
     }
   }, [lockoutUntil]);
 
+  useEffect(() => {
+    if (!otpExpiresAt) return;
+
+    const tick = () => {
+      const remaining = Math.ceil((otpExpiresAt - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setOtpExpiresAt(null);
+        setOtpRemaining(0);
+        if (otpTimer.current) clearInterval(otpTimer.current);
+      } else {
+        setOtpRemaining(remaining);
+      }
+    };
+
+    tick();
+    otpTimer.current = setInterval(tick, 1000);
+
+    return () => {
+      if (otpTimer.current) clearInterval(otpTimer.current);
+    };
+  }, [otpExpiresAt]);
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const secs = (seconds % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
+  };
+
   const normalizedEmail = email.trim().toLowerCase();
   const isLockedOut = lockoutUntil !== null && Date.now() < lockoutUntil;
+  const isOtpExpired = otpExpiresAt !== null && Date.now() > otpExpiresAt;
 
   const handleLoginFailure = () => {
     const attempts = failedAttempts + 1;
@@ -76,16 +109,22 @@ export default function AuthPage() {
       toast.error("اكتب البريد الإلكتروني أولاً");
       return;
     }
+
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
+
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("تم إرسال رسالة استعادة كلمة المرور إلى بريدك الإلكتروني. يمكنك الضغط على الرابط في الرسالة أو إدخال رمز التحقق هنا.");
+      setOtpCode("");
+      setOtpExpiresAt(Date.now() + OTP_EXPIRY_SECONDS * 1000);
+      setOtpRemaining(OTP_EXPIRY_SECONDS);
       setStep("forgot-otp");
+      toast.success("تم إرسال رمز التحقق المكون من 6 أرقام، وصلاحيته 5 دقائق");
     }
+
     setLoading(false);
   };
 
@@ -95,18 +134,27 @@ export default function AuthPage() {
       toast.error("أدخل رمز التحقق المكون من 6 أرقام");
       return;
     }
+
+    if (!otpExpiresAt || isOtpExpired) {
+      toast.error("انتهت صلاحية الرمز بعد 5 دقائق، اطلب رمزاً جديداً");
+      setOtpCode("");
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.verifyOtp({
       email: normalizedEmail,
       token: otpCode,
       type: "recovery",
     });
+
     if (error) {
       toast.error("رمز التحقق غير صحيح أو منتهي الصلاحية");
     } else {
       toast.success("تم التحقق بنجاح! أدخل كلمة المرور الجديدة");
       setStep("forgot-newpass");
     }
+
     setLoading(false);
   };
 
@@ -189,6 +237,8 @@ export default function AuthPage() {
   const resetToLogin = () => {
     setStep("login");
     setOtpCode("");
+    setOtpExpiresAt(null);
+    setOtpRemaining(0);
     setNewPassword("");
     setConfirmPassword("");
   };
@@ -259,8 +309,11 @@ export default function AuthPage() {
                 <p className="text-sm text-muted-foreground mb-2">
                   تم إرسال رسالة إلى <span className="text-foreground font-medium" dir="ltr">{normalizedEmail}</span>
                 </p>
-                <p className="text-xs text-muted-foreground mb-6">
-                  افتح الرسالة وأدخل رمز التحقق المكون من 6 أرقام، أو اضغط على الرابط في الرسالة مباشرة.
+                <p className="text-xs text-muted-foreground mb-1">
+                  أدخل الرمز المكون من 6 أرقام خلال 5 دقائق.
+                </p>
+                <p className="text-xs text-foreground mb-6" dir="ltr">
+                  {otpRemaining > 0 ? `ينتهي خلال ${formatCountdown(otpRemaining)}` : "انتهت صلاحية الرمز"}
                 </p>
                 <div className="space-y-5">
                   <div className="flex justify-center" dir="ltr">
@@ -275,12 +328,16 @@ export default function AuthPage() {
                       </InputOTPGroup>
                     </InputOTP>
                   </div>
-                  <Button className="w-full h-11" onClick={handleVerifyOTP} disabled={loading || otpCode.length !== 6}>
+                  <Button
+                    className="w-full h-11"
+                    onClick={handleVerifyOTP}
+                    disabled={loading || otpCode.length !== 6 || otpRemaining <= 0}
+                  >
                     {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                     تحقق
                   </Button>
                   <Button variant="ghost" className="w-full text-xs" onClick={handleSendOTP} disabled={loading}>
-                    إعادة إرسال الرمز
+                    إعادة إرسال رمز جديد
                   </Button>
                 </div>
               </>
@@ -412,7 +469,12 @@ export default function AuthPage() {
                     type="button"
                     variant="ghost"
                     className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => setStep("forgot-email")}
+                    onClick={() => {
+                      setOtpCode("");
+                      setOtpExpiresAt(null);
+                      setOtpRemaining(0);
+                      setStep("forgot-email");
+                    }}
                   >
                     نسيت كلمة المرور؟
                   </Button>
