@@ -16,7 +16,7 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 12) {
+    if (isSignUp && password.length < 12) {
       toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل");
       return;
     }
@@ -32,7 +32,11 @@ export default function AuthPage() {
         },
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(
+          error.message === "User already registered"
+            ? "الحساب موجود بالفعل، جرّب تسجيل الدخول بنفس البريد"
+            : error.message
+        );
       } else {
         toast.success("تم إنشاء الحساب! تحقق من بريدك الإلكتروني لتأكيد الحساب.");
       }
@@ -41,7 +45,7 @@ export default function AuthPage() {
       if (error) {
         toast.error(
           error.message === "Invalid login credentials"
-            ? "بيانات الدخول غير صحيحة"
+            ? "بيانات الدخول غير صحيحة (راجع البريد وكلمة المرور)"
             : error.message
         );
       }
@@ -114,7 +118,7 @@ export default function AuthPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 required
-                minLength={12}
+                minLength={isSignUp ? 12 : undefined}
                 dir="ltr"
                 className="text-left pr-10"
               />
@@ -127,7 +131,7 @@ export default function AuthPage() {
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              يجب أن تكون 12 حرف على الأقل
+              {isSignUp ? "يجب أن تكون 12 حرف على الأقل" : ""}
             </p>
           </div>
           <Button type="submit" className="w-full h-11" disabled={loading}>
