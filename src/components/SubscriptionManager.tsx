@@ -121,25 +121,25 @@ export default function SubscriptionManager({ organizationId, organizationName }
 
     let error: any = null;
 
-    if (subscription && new Date(subscription.ends_at) > new Date()) {
-      // Active subscription exists — extend it
-      const totalMonths = subscription.months + months;
-      const newEnd = new Date(subscription.ends_at);
-      newEnd.setMonth(newEnd.getMonth() + months);
+    const startsAt = new Date();
+    const endsAt = new Date(startsAt.getTime() + months * 30 * 24 * 60 * 60 * 1000);
+
+    if (subscription) {
+      // Update existing subscription (do not add on top of previous months)
       const { error: updateErr } = await supabase
         .from("subscriptions")
         .update({
-          ends_at: newEnd.toISOString(),
-          months: totalMonths,
-          notes: `تم دفع الاشتراك من صاحب الموقع لمدة ${totalMonths} شهر`,
+          starts_at: startsAt.toISOString(),
+          ends_at: endsAt.toISOString(),
+          months,
+          amount: 0,
+          payment_method: "free_grant",
+          notes: `تم دفع الاشتراك من صاحب الموقع لمدة ${months} شهر`,
         })
         .eq("id", subscription.id);
       error = updateErr;
     } else {
-      // No active subscription — create new
-      const startsAt = new Date();
-      const endsAt = new Date();
-      endsAt.setMonth(endsAt.getMonth() + months);
+      // No existing subscription — create new
       const { error: insertErr } = await supabase.from("subscriptions").insert({
         organization_id: organizationId,
         starts_at: startsAt.toISOString(),
@@ -159,9 +159,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success(subscription && new Date(subscription.ends_at) > new Date()
-        ? `تم تجديد الاشتراك بـ ${months} شهر إضافي`
-        : `تم تفعيل الاشتراك المجاني لمدة ${months} شهر`);
+      toast.success(`تم تحديث الاشتراك المجاني لمدة ${months} شهر`);
       setGrantOpen(false);
       setGrantPassword("");
       fetchData();
