@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const [rolesRes, profileRes] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", userId),
-        supabase.from("profiles").select("account_status, organization_id").eq("user_id", userId).single(),
+        supabase.from("profiles").select("account_status, organization_id, display_name").eq("user_id", userId).single(),
       ]);
 
       // Determine highest role
