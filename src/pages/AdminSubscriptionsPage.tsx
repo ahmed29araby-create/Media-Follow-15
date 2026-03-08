@@ -12,6 +12,7 @@ import {
   CreditCard, Loader2, CheckCircle, XCircle, Clock,
   Phone, Image as ImageIcon, Building2, Lock,
 } from "lucide-react";
+import PlanManagement from "@/components/subscription/PlanManagement";
 
 interface PaymentRequest {
   id: string;
@@ -228,6 +229,9 @@ export default function AdminSubscriptionsPage() {
         </h1>
         <p className="text-sm text-muted-foreground">مراجعة وإدارة طلبات الاشتراك</p>
       </div>
+
+      {/* Plan Management Section */}
+      <PlanManagement />
 
       {/* Filter tabs */}
       <div className="flex gap-2 flex-wrap">
