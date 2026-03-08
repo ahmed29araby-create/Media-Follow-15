@@ -444,7 +444,7 @@ export default function FinancialReportsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-foreground">{Number(sub.amount) > 0 ? formatCurrency(Number(sub.amount)) : "مجاني"}</span>
                       {new Date(sub.ends_at) > now ? (
-                        <Badge className="bg-primary/15 text-primary border-primary/30 text-[10px]">نشط</Badge>
+                        <Badge className="bg-success/15 text-success border-success/30 text-[10px]">نشط</Badge>
                       ) : (
                         <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">منتهي</Badge>
                       )}
