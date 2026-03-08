@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Mail, Eye, EyeOff, Building2 } from "lucide-react";
 
@@ -23,7 +22,9 @@ export default function PrivacyPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [showPasswords, setShowPasswords] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
 
   const isOrgUser = (isAdmin || isSuperAdmin) && organizationId;
@@ -76,6 +77,33 @@ export default function PrivacyPage() {
     setPasswordLoading(false);
   };
 
+  const PasswordInput = ({ value, onChange, placeholder, show, setShow }: {
+    value: string; onChange: (v: string) => void; placeholder: string;
+    show: boolean; setShow: (v: boolean) => void;
+  }) => (
+    <div className="relative">
+      <Input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        dir="ltr"
+        className="text-left pl-10"
+      />
+      <button
+        type="button"
+        onMouseDown={() => setShow(true)}
+        onMouseUp={() => setShow(false)}
+        onMouseLeave={() => setShow(false)}
+        onTouchStart={() => setShow(true)}
+        onTouchEnd={() => setShow(false)}
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground select-none"
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+
   return (
     <div className="p-6 flex justify-center" dir="rtl">
       <div className="w-full max-w-md space-y-8">
@@ -87,7 +115,6 @@ export default function PrivacyPage() {
           </div>
         )}
 
-        {/* Sections */}
         <div className="space-y-6">
           {/* Org Name Change */}
           {isOrgUser && (
@@ -96,8 +123,8 @@ export default function PrivacyPage() {
                 تغيير اسم الشركة
                 <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
               </h3>
-              <Input value={editOrgName} onChange={(e) => setEditOrgName(e.target.value)} placeholder="اسم الشركة" className="text-right" />
-              <div className="flex justify-end">
+              <Input value={editOrgName} onChange={(e) => setEditOrgName(e.target.value)} placeholder="اسم الشركة" dir="ltr" className="text-left" />
+              <div className="flex justify-start">
                 <Button size="sm" onClick={saveOrgInfo} disabled={savingOrg}>
                   {savingOrg && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                   حفظ التغييرات
@@ -113,12 +140,9 @@ export default function PrivacyPage() {
               تغيير البريد الإلكتروني
               <Mail className="h-3.5 w-3.5 text-muted-foreground" />
             </h3>
-            <p className="text-xs text-muted-foreground text-right">
-              البريد الحالي: <span className="text-foreground" dir="ltr">{user?.email}</span>
-            </p>
-            <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="البريد الإلكتروني الجديد" dir="ltr" className="text-right" />
+            <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="البريد الإلكتروني الجديد" dir="ltr" className="text-left" />
             <p className="text-xs text-muted-foreground text-right">سيتم إرسال رسالة تأكيد إلى البريد الجديد قبل التفعيل.</p>
-            <div className="flex justify-end">
+            <div className="flex justify-start">
               <Button size="sm" onClick={handleEmailChange} disabled={emailChangeLoading}>
                 {emailChangeLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 تغيير البريد
@@ -132,10 +156,10 @@ export default function PrivacyPage() {
             <h3 className="text-sm font-medium text-foreground flex items-center justify-end gap-2">
               تغيير كلمة المرور
             </h3>
-            <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="كلمة المرور الحالية" dir="ltr" className="text-right" />
-            <Input id="new-password-privacy" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="كلمة المرور الجديدة" dir="ltr" className="text-right" />
-            <Input id="confirm-new-password-privacy" type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="كلمة المرور يجب أن تكون 12 حرف على الأقل" dir="ltr" className="text-right" />
-            <div className="flex justify-end">
+            <PasswordInput value={currentPassword} onChange={setCurrentPassword} placeholder="كلمة المرور الحالية" show={showCurrent} setShow={setShowCurrent} />
+            <PasswordInput value={newPassword} onChange={setNewPassword} placeholder="كلمة المرور الجديدة" show={showNew} setShow={setShowNew} />
+            <PasswordInput value={confirmNewPassword} onChange={setConfirmNewPassword} placeholder="كلمة المرور يجب أن تكون 12 حرف على الأقل" show={showConfirm} setShow={setShowConfirm} />
+            <div className="flex justify-start">
               <Button size="sm" onClick={handlePasswordChange} disabled={passwordLoading}>
                 {passwordLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                 تحديث كلمة المرور
