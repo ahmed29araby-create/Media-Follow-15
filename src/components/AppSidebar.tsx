@@ -27,6 +27,7 @@ const superAdminLinks = [
   { to: "/financial-reports", label: "التقارير المالية", icon: BarChart3 },
   { to: "/settings", label: "الإعدادات", icon: Settings },
   { to: "/privacy", label: "الخصوصية", icon: ShieldCheck },
+  { to: "/offers", label: "العروض", icon: Gift },
 ];
 
 const adminLinks = [
