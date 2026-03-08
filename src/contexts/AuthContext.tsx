@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSuperAdmin, isAdmin, isMember,
         accountStatus, organizationId, organizationName,
         isOrgActive,
-        signOut,
+        signOut, refreshOrgData,
       }}
     >
       {children}
