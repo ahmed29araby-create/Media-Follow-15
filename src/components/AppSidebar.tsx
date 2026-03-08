@@ -49,6 +49,7 @@ interface AppSidebarProps {
 export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
   const { user, role, isSuperAdmin, isAdmin, signOut, organizationName } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
