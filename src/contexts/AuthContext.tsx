@@ -33,6 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   organizationName: null,
   isOrgActive: true,
   signOut: async () => {},
+  refreshOrgData: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
