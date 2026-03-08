@@ -27,7 +27,7 @@ interface Organization {
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
   const [orgs, setOrgs] = useState<Organization[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "active" | "disabled">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
