@@ -74,17 +74,6 @@ export default function SettingsPage() {
     setDisconnecting(false);
   };
 
-  const saveOrgInfo = async () => {
-    if (!orgName.trim() || !orgEmail.trim()) {
-      toast.error("اسم الشركة والبريد الإلكتروني مطلوبان");
-      return;
-    }
-    setSavingOrg(true);
-    const { error } = await supabase.from("organizations").update({ name: orgName.trim(), email: orgEmail.trim() }).eq("id", organizationId!);
-    if (error) toast.error(error.message);
-    else toast.success("تم تحديث بيانات الشركة");
-    setSavingOrg(false);
-  };
 
   if (loading) return <div className="p-6 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
