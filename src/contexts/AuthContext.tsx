@@ -157,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user, session, loading, role,
         isSuperAdmin, isAdmin, isMember,
         accountStatus, organizationId, organizationName,
+        isOrgActive,
         signOut,
       }}
     >
