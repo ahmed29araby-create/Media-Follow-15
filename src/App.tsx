@@ -21,8 +21,25 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
+function OrgDisabledScreen() {
+  const { signOut } = useAuth();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-6" dir="rtl">
+      <div className="max-w-md w-full text-center space-y-6">
+        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-destructive/10 mx-auto">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-destructive" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        </div>
+        <h1 className="text-2xl font-bold text-foreground">تم تعطيل الشركة</h1>
+        <p className="text-muted-foreground">تم تعطيل شركتك من قِبل مسؤول الموقع. لا يمكنك الوصول إلى النظام حالياً.</p>
+        <p className="text-sm text-muted-foreground">يرجى التواصل مع مسؤول الموقع لمزيد من المعلومات.</p>
+        <button onClick={signOut} className="text-sm text-primary hover:underline">تسجيل الخروج</button>
+      </div>
+    </div>
+  );
+}
+
 function ProtectedRoutes() {
-  const { user, loading, isSuperAdmin, isAdmin, isMember, accountStatus, role } = useAuth();
+  const { user, loading, isSuperAdmin, isAdmin, isMember, accountStatus, role, isOrgActive } = useAuth();
 
   if (loading) {
     return (
@@ -34,6 +51,7 @@ function ProtectedRoutes() {
 
   if (!user) return <Navigate to="/auth" replace />;
   if (accountStatus !== "approved") return <PendingApproval />;
+  if (!isOrgActive && !isSuperAdmin) return <OrgDisabledScreen />;
 
   return (
     <Routes>

@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { Building2, Plus, Users, Activity, Loader2, Eye, EyeOff, CheckCircle, XCircle, Shield, Globe, Zap, Info, Trash2, CalendarDays } from "lucide-react";
+import { Building2, Plus, Users, Activity, Loader2, Eye, EyeOff, CheckCircle, XCircle, Shield, Globe, Zap, Info, Trash2, CalendarDays, Ban, Power } from "lucide-react";
 
 interface Organization {
   id: string;
@@ -39,6 +39,12 @@ export default function SuperAdminDashboard() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [showDeletePassword, setShowDeletePassword] = useState(false);
+
+  // Toggle (disable/enable) confirmation
+  const [toggleOrg, setToggleOrg] = useState<Organization | null>(null);
+  const [togglePassword, setTogglePassword] = useState("");
+  const [toggling, setToggling] = useState(false);
+  const [showTogglePassword, setShowTogglePassword] = useState(false);
 
   const [form, setForm] = useState({
     org_name: "", org_email: "",
@@ -87,6 +93,25 @@ export default function SuperAdminDashboard() {
       fetchOrgs();
     }
     setDeleting(false);
+  };
+
+  const handleToggle = async () => {
+    if (!toggleOrg || !togglePassword) return;
+    setToggling(true);
+    const newStatus = !toggleOrg.is_active;
+    const { data, error } = await supabase.functions.invoke("toggle-organization", {
+      body: { organization_id: toggleOrg.id, password: togglePassword, is_active: newStatus },
+    });
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "فشلت العملية");
+    } else {
+      toast.success(newStatus ? "تم تفعيل الشركة بنجاح" : "تم تعطيل الشركة بنجاح");
+      setToggleOrg(null);
+      setDetailsOrg(null);
+      setTogglePassword("");
+      fetchOrgs();
+    }
+    setToggling(false);
   };
 
   const formatDate = (dateStr: string) => {
@@ -286,6 +311,18 @@ export default function SuperAdminDashboard() {
                 <Trash2 className="h-4 w-4" />
                 حذف الشركة نهائياً
               </Button>
+
+              <Button
+                variant="outline"
+                className={`w-full gap-2 ${detailsOrg.is_active ? "border-destructive/50 text-destructive hover:bg-destructive/10" : "border-primary/50 text-primary hover:bg-primary/10"}`}
+                onClick={() => setToggleOrg(detailsOrg)}
+              >
+                {detailsOrg.is_active ? (
+                  <><Ban className="h-4 w-4" /> تعطيل الشركة</>
+                ) : (
+                  <><Power className="h-4 w-4" /> تفعيل الشركة</>
+                )}
+              </Button>
             </div>
           )}
         </DialogContent>
@@ -324,6 +361,51 @@ export default function SuperAdminDashboard() {
             <Button variant="destructive" onClick={handleDelete} disabled={deleting || !deletePassword}>
               {deleting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               حذف نهائي
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Toggle (Disable/Enable) Confirmation */}
+      <AlertDialog open={!!toggleOrg} onOpenChange={(open) => { if (!open) { setToggleOrg(null); setTogglePassword(""); } }}>
+        <AlertDialogContent className="bg-card border-border" dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className={`flex items-center gap-2 ${toggleOrg?.is_active ? "text-destructive" : "text-primary"}`}>
+              {toggleOrg?.is_active ? <Ban className="h-5 w-5" /> : <Power className="h-5 w-5" />}
+              {toggleOrg?.is_active ? "تأكيد تعطيل الشركة" : "تأكيد تفعيل الشركة"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              {toggleOrg?.is_active
+                ? <>سيتم تعطيل شركة <strong className="text-foreground">{toggleOrg?.name}</strong> ولن يتمكن أي مستخدم من تسجيل الدخول حتى يتم تفعيلها مرة أخرى.</>
+                : <>سيتم إعادة تفعيل شركة <strong className="text-foreground">{toggleOrg?.name}</strong> وسيتمكن المستخدمون من تسجيل الدخول مجدداً.</>
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>أدخل كلمة المرور الخاصة بك للتأكيد</Label>
+            <div className="relative">
+              <Input
+                value={togglePassword}
+                onChange={e => setTogglePassword(e.target.value)}
+                type={showTogglePassword ? "text" : "password"}
+                placeholder="••••••••••••"
+                dir="ltr"
+                className="text-left pr-10"
+              />
+              <button type="button" onClick={() => setShowTogglePassword(!showTogglePassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showTogglePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <Button
+              variant={toggleOrg?.is_active ? "destructive" : "default"}
+              onClick={handleToggle}
+              disabled={toggling || !togglePassword}
+            >
+              {toggling && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              {toggleOrg?.is_active ? "تعطيل" : "تفعيل"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

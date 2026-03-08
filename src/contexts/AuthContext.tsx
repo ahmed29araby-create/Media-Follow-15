@@ -15,6 +15,7 @@ interface AuthContextType {
   accountStatus: string | null;
   organizationId: string | null;
   organizationName: string | null;
+  isOrgActive: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextType>({
   accountStatus: null,
   organizationId: null,
   organizationName: null,
+  isOrgActive: true,
   signOut: async () => {},
 });
 
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accountStatus, setAccountStatus] = useState<string | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [isOrgActive, setIsOrgActive] = useState(true);
   const sessionInitializedRef = useRef(false);
 
   const fetchUserData = async (userId: string) => {
@@ -66,18 +69,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (orgId) {
         const { data: orgData } = await supabase
           .from("organizations")
-          .select("name")
+          .select("name, is_active")
           .eq("id", orgId)
           .single();
         setOrganizationName(orgData?.name ?? null);
+        setIsOrgActive(orgData?.is_active ?? true);
       } else {
         setOrganizationName(null);
+        setIsOrgActive(true);
       }
     } catch {
       setRole(null);
       setAccountStatus(null);
       setOrganizationId(null);
       setOrganizationName(null);
+      setIsOrgActive(true);
     }
   };
 
@@ -151,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user, session, loading, role,
         isSuperAdmin, isAdmin, isMember,
         accountStatus, organizationId, organizationName,
+        isOrgActive,
         signOut,
       }}
     >
