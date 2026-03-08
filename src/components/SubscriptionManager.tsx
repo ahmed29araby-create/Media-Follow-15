@@ -122,27 +122,22 @@ export default function SubscriptionManager({ organizationId, organizationName }
     let error: any = null;
 
     const startsAt = new Date();
+    const startsAtIso = startsAt.toISOString();
     const endsAt = new Date(startsAt.getTime() + months * 30 * 24 * 60 * 60 * 1000);
 
-    if (subscription) {
-      // Update existing subscription (do not add on top of previous months)
-      const { error: updateErr } = await supabase
-        .from("subscriptions")
-        .update({
-          starts_at: startsAt.toISOString(),
-          ends_at: endsAt.toISOString(),
-          months,
-          amount: 0,
-          payment_method: "free_grant",
-          notes: `تم دفع الاشتراك من صاحب الموقع لمدة ${months} شهر`,
-        })
-        .eq("id", subscription.id);
-      error = updateErr;
+    // Always replace current subscription duration (never add to old duration)
+    const { error: closeActiveErr } = await supabase
+      .from("subscriptions")
+      .update({ ends_at: startsAtIso })
+      .eq("organization_id", organizationId)
+      .gte("ends_at", startsAtIso);
+
+    if (closeActiveErr) {
+      error = closeActiveErr;
     } else {
-      // No existing subscription — create new
       const { error: insertErr } = await supabase.from("subscriptions").insert({
         organization_id: organizationId,
-        starts_at: startsAt.toISOString(),
+        starts_at: startsAtIso,
         ends_at: endsAt.toISOString(),
         months,
         amount: 0,
