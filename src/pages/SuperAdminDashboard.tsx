@@ -95,6 +95,25 @@ export default function SuperAdminDashboard() {
     setDeleting(false);
   };
 
+  const handleToggle = async () => {
+    if (!toggleOrg || !togglePassword) return;
+    setToggling(true);
+    const newStatus = !toggleOrg.is_active;
+    const { data, error } = await supabase.functions.invoke("toggle-organization", {
+      body: { organization_id: toggleOrg.id, password: togglePassword, is_active: newStatus },
+    });
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "فشلت العملية");
+    } else {
+      toast.success(newStatus ? "تم تفعيل الشركة بنجاح" : "تم تعطيل الشركة بنجاح");
+      setToggleOrg(null);
+      setDetailsOrg(null);
+      setTogglePassword("");
+      fetchOrgs();
+    }
+    setToggling(false);
+  };
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
