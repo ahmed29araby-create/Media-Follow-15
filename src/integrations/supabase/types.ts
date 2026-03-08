@@ -354,6 +354,119 @@ export type Database = {
           },
         ]
       }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_codes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_credits: {
+        Row: {
+          amount: number
+          created_at: string
+          expires_at: string
+          id: string
+          organization_id: string
+          referral_id: string | null
+          remaining: number
+          source_description: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          organization_id: string
+          referral_id?: string | null
+          remaining?: number
+          source_description?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          referral_id?: string | null
+          remaining?: number
+          source_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_credits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_credits_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referred_org_id: string
+          referrer_org_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referred_org_id: string
+          referrer_org_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referred_org_id?: string
+          referrer_org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_org_id_fkey"
+            columns: ["referred_org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_org_id_fkey"
+            columns: ["referrer_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_payments: {
         Row: {
           amount: number
