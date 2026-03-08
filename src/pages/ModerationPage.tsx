@@ -111,8 +111,8 @@ export default function ModerationPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleFileAction(file.id, "approved")}>
-                    <Check className="h-4 w-4" />
+                  <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleFileAction(file.id, "approved")} disabled={syncingFiles.has(file.id)}>
+                    {syncingFiles.has(file.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   </Button>
                   <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleFileAction(file.id, "rejected")}>
                     <X className="h-4 w-4" />
