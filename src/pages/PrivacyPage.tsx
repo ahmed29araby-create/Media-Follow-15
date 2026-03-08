@@ -131,25 +131,10 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h3 className="text-sm font-medium text-foreground flex items-center justify-end gap-2">
               تغيير كلمة المرور
-              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
             </h3>
-            <div className="space-y-2">
-              <Label htmlFor="current-password" className="block text-right">كلمة المرور الحالية</Label>
-              <div className="relative">
-                <Input id="current-password" type={showPasswords ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="كلمة المرور الحالية" dir="ltr" className="text-right pr-10" />
-                <button type="button" onClick={() => setShowPasswords(!showPasswords)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password-privacy" className="block text-right">كلمة المرور الجديدة</Label>
-              <Input id="new-password-privacy" type={showPasswords ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="كلمة المرور الجديدة" dir="ltr" className="text-right" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-new-password-privacy" className="block text-right">تأكيد كلمة المرور الجديدة</Label>
-              <Input id="confirm-new-password-privacy" type={showPasswords ? "text" : "password"} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="كلمة المرور يجب أن تكون 12 حرف على الأقل" dir="ltr" className="text-right" />
-            </div>
+            <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="كلمة المرور الحالية" dir="ltr" className="text-right" />
+            <Input id="new-password-privacy" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="كلمة المرور الجديدة" dir="ltr" className="text-right" />
+            <Input id="confirm-new-password-privacy" type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="كلمة المرور يجب أن تكون 12 حرف على الأقل" dir="ltr" className="text-right" />
             <div className="flex justify-end">
               <Button size="sm" onClick={handlePasswordChange} disabled={passwordLoading}>
                 {passwordLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
