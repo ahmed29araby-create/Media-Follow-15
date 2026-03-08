@@ -33,8 +33,28 @@ function OrgDisabledScreen() {
   const [appealText, setAppealText] = useState("");
   const [submittingAppeal, setSubmittingAppeal] = useState(false);
   const [appealSent, setAppealSent] = useState(false);
+  const [lastAppealStatus, setLastAppealStatus] = useState<string | null>(null);
+  const [loadingAppeal, setLoadingAppeal] = useState(true);
 
   const isSubscriptionIssue = !disableReason;
+
+  // Fetch latest appeal status
+  useState(() => {
+    if (!organizationId || !user) { setLoadingAppeal(false); return; }
+    supabase
+      .from("org_appeals")
+      .select("status")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setLastAppealStatus(data[0].status);
+          if (data[0].status === "pending") setAppealSent(true);
+        }
+        setLoadingAppeal(false);
+      });
+  });
 
   const handleSubmitAppeal = async () => {
     if (!appealText.trim() || !user || !organizationId) return;
