@@ -104,11 +104,11 @@ export default function PrivacyPage() {
   };
 
   const handlePasswordChange = async () => {
-    if (!currentPassword) { toast.error("أدخل كلمة المرور الحالية"); return; }
-    if (!newPassword) { toast.error("أدخل كلمة المرور الجديدة"); return; }
-    if (newPassword.length < 12) { toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل"); return; }
-    if (!confirmNewPassword) { toast.error("أدخل تأكيد كلمة المرور"); return; }
-    if (newPassword !== confirmNewPassword) { toast.error("كلمتا المرور غير متطابقتين"); return; }
+    if (!currentPassword) { toast.error("أدخل كلمة المرور الحالية", { id: "pw-current-required" }); return; }
+    if (!newPassword) { toast.error("أدخل كلمة المرور الجديدة", { id: "pw-new-required" }); return; }
+    if (newPassword.length < 12) { toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل", { id: "pw-min-length" }); return; }
+    if (!confirmNewPassword) { toast.error("أدخل تأكيد كلمة المرور", { id: "pw-confirm-required" }); return; }
+    if (newPassword !== confirmNewPassword) { toast.error("كلمتا المرور غير متطابقتين", { id: "pw-mismatch" }); return; }
     setPasswordLoading(true);
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: user?.email || "", password: currentPassword });
     if (signInError) { toast.error("كلمة المرور الحالية غير صحيحة"); setPasswordLoading(false); return; }
