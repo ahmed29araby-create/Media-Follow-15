@@ -5,16 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FolderOpen, Loader2, Link2, Unlink, Mail, CheckCircle2 } from "lucide-react";
+import { FolderOpen, Loader2, Link2, Unlink, Mail, CheckCircle2, Building2, Pencil } from "lucide-react";
 
 export default function SettingsPage() {
-  const { organizationId } = useAuth();
+  const { organizationId, organizationName } = useAuth();
   const [driveFolderPath, setDriveFolderPath] = useState("");
   const [saving, setSaving] = useState(false);
   const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Org editing
+  const [orgName, setOrgName] = useState("");
+  const [orgEmail, setOrgEmail] = useState("");
+  const [savingOrg, setSavingOrg] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -24,10 +29,20 @@ export default function SettingsPage() {
       ]);
       if (folderRes.data) setDriveFolderPath(folderRes.data.setting_value);
       if (emailRes.data) setConnectedEmail(emailRes.data.setting_value);
+
+      // Fetch org info
+      if (organizationId) {
+        const { data: orgData } = await supabase.from("organizations").select("name, email").eq("id", organizationId).single();
+        if (orgData) {
+          setOrgName(orgData.name);
+          setOrgEmail(orgData.email);
+        }
+      }
+
       setLoading(false);
     };
     fetchSettings();
-  }, []);
+  }, [organizationId]);
 
   const saveSetting = async (key: string, value: string) => {
     setSaving(true);
@@ -72,13 +87,45 @@ export default function SettingsPage() {
     setDisconnecting(false);
   };
 
+  const saveOrgInfo = async () => {
+    if (!orgName.trim() || !orgEmail.trim()) {
+      toast.error("اسم الشركة والبريد الإلكتروني مطلوبان");
+      return;
+    }
+    setSavingOrg(true);
+    const { error } = await supabase.from("organizations").update({ name: orgName.trim(), email: orgEmail.trim() }).eq("id", organizationId!);
+    if (error) toast.error(error.message);
+    else toast.success("تم تحديث بيانات الشركة");
+    setSavingOrg(false);
+  };
+
   if (loading) return <div className="p-6 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="p-6 max-w-2xl space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
-        <p className="text-sm text-muted-foreground">إعدادات التكامل</p>
+        <p className="text-sm text-muted-foreground">إعدادات الشركة والتكامل</p>
+      </div>
+
+      {/* Company Info */}
+      <div className="glass-panel p-6 space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><Building2 className="h-4 w-4 text-primary" /></div>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">بيانات الشركة</h2>
+            <p className="text-xs text-muted-foreground">تعديل اسم الشركة والبريد الإلكتروني</p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2"><Pencil className="h-3.5 w-3.5 text-muted-foreground" />اسم الشركة</Label>
+          <Input value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="اسم الشركة" />
+        </div>
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-muted-foreground" />البريد الإلكتروني</Label>
+          <Input value={orgEmail} onChange={e => setOrgEmail(e.target.value)} placeholder="company@example.com" type="email" dir="ltr" className="text-left" />
+        </div>
+        <Button onClick={saveOrgInfo} disabled={savingOrg}>{savingOrg && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}حفظ التغييرات</Button>
       </div>
 
       {/* Google Drive Settings */}
