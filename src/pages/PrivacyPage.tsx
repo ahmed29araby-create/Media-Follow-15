@@ -137,6 +137,32 @@ export default function PrivacyPage() {
         )}
 
         <div className="space-y-6">
+          {/* Display Name Change (for super admin) */}
+          {isSuperAdmin && (
+            <section className="space-y-3">
+              <h3 className="text-sm font-medium text-foreground flex items-center justify-end gap-2">
+                تغيير الاسم
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+              </h3>
+              <Input value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder="الاسم" dir="rtl" className="text-right" />
+              <div className="flex justify-start">
+                <Button size="sm" onClick={async () => {
+                  if (!editDisplayName.trim()) { toast.error("الاسم مطلوب", { id: "name-required" }); return; }
+                  if (editDisplayName.trim() === displayName) return;
+                  setSavingDisplayName(true);
+                  const { error } = await supabase.from("profiles").update({ display_name: editDisplayName.trim() }).eq("user_id", user!.id);
+                  if (error) toast.error(error.message);
+                  else { toast.success("تم تحديث الاسم"); await refreshDisplayName(); }
+                  setSavingDisplayName(false);
+                }} disabled={savingDisplayName}>
+                  {savingDisplayName && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                  حفظ التغييرات
+                </Button>
+              </div>
+              <div className="border-b border-border pt-2" />
+            </section>
+          )}
+
           {/* Org Name Change */}
           {isOrgUser && (
             <section className="space-y-3">

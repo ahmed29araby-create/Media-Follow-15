@@ -233,7 +233,7 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
           </TooltipTrigger>
           {!open && (
             <TooltipContent side="right" className="text-xs">
-              {isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
+              {isSuperAdmin ? (displayName || organizationName || "مدير المنصة") : isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
             </TooltipContent>
           )}
         </Tooltip>
