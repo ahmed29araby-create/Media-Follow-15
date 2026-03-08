@@ -130,7 +130,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
         .update({
           ends_at: newEnd.toISOString(),
           months: subscription.months + months,
-          notes: `${subscription.notes || ""}\n+ تمديد ${months} شهر مجاني من صاحب الموقع`,
+          notes: `${subscription.notes || ""}\n+ تجديد ${months} شهر مجاني من صاحب الموقع`,
         })
         .eq("id", subscription.id);
       error = updateErr;
