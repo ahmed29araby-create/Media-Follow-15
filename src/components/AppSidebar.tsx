@@ -206,10 +206,9 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
                 className="overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out"
                 style={{ width: open ? "140px" : "0px", opacity: open ? 1 : 0 }}
               >
-                <p className="text-xs font-medium text-white truncate text-left">
+                <p className="text-sm font-semibold text-white truncate text-left leading-9">
                   {isAdmin ? (organizationName || user?.user_metadata?.display_name || user?.email) : (user?.user_metadata?.display_name || user?.email)}
                 </p>
-                <p className="text-[9px] text-white/40 text-left">{roleLabel}</p>
               </div>
             </button>
           </TooltipTrigger>
