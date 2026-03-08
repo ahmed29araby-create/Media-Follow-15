@@ -184,7 +184,7 @@ export type Database = {
     }
     Enums: {
       account_status: "pending" | "approved" | "rejected"
-      app_role: "admin" | "member"
+      app_role: "admin" | "member" | "super_admin"
       file_status: "pending" | "approved" | "rejected" | "delete_requested"
       quality_type: "proxy" | "original"
       request_status: "pending" | "approved" | "rejected"
@@ -317,7 +317,7 @@ export const Constants = {
   public: {
     Enums: {
       account_status: ["pending", "approved", "rejected"],
-      app_role: ["admin", "member"],
+      app_role: ["admin", "member", "super_admin"],
       file_status: ["pending", "approved", "rejected", "delete_requested"],
       quality_type: ["proxy", "original"],
       request_status: ["pending", "approved", "rejected"],
