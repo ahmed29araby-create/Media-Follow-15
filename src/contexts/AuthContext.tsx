@@ -16,6 +16,7 @@ interface AuthContextType {
   organizationId: string | null;
   organizationName: string | null;
   isOrgActive: boolean;
+  disableReason: string | null;
   displayName: string | null;
   signOut: () => Promise<void>;
   refreshOrgData: () => Promise<void>;
@@ -34,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   organizationId: null,
   organizationName: null,
   isOrgActive: true,
+  disableReason: null,
   displayName: null,
   signOut: async () => {},
   refreshOrgData: async () => {},
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isOrgActive, setIsOrgActive] = useState(true);
+  const [disableReason, setDisableReason] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const sessionInitializedRef = useRef(false);
 
@@ -77,14 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (orgId) {
         const { data: orgData } = await supabase
           .from("organizations")
-          .select("name, is_active")
+          .select("name, is_active, disable_reason")
           .eq("id", orgId)
           .single();
         setOrganizationName(orgData?.name ?? null);
         setIsOrgActive(orgData?.is_active ?? true);
+        setDisableReason((orgData as any)?.disable_reason ?? null);
       } else {
         setOrganizationName(null);
         setIsOrgActive(true);
+        setDisableReason(null);
       }
     } catch {
       setRole(null);
@@ -92,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setDisplayName(null);
       setOrganizationId(null);
       setOrganizationName(null);
+      setDisableReason(null);
       setIsOrgActive(true);
     }
   };
@@ -112,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDisplayName(null);
         setOrganizationId(null);
         setOrganizationName(null);
+        setDisableReason(null);
         setLoading(false);
         return;
       }
@@ -145,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDisplayName(null);
         setOrganizationId(null);
         setOrganizationName(null);
+        setDisableReason(null);
         setLoading(false);
       });
 
@@ -162,12 +170,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!organizationId) return;
     const { data: orgData } = await supabase
       .from("organizations")
-      .select("name, is_active")
+      .select("name, is_active, disable_reason")
       .eq("id", organizationId)
       .single();
     if (orgData) {
       setOrganizationName(orgData.name);
       setIsOrgActive(orgData.is_active);
+      setDisableReason((orgData as any)?.disable_reason ?? null);
     }
   };
 
@@ -191,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user, session, loading, role,
         isSuperAdmin, isAdmin, isMember,
         accountStatus, organizationId, organizationName,
-        isOrgActive, displayName,
+        isOrgActive, disableReason, displayName,
         signOut, refreshOrgData, refreshDisplayName,
       }}
     >

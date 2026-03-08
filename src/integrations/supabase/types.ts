@@ -242,9 +242,51 @@ export type Database = {
           },
         ]
       }
+      org_appeals: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          organization_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          organization_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          organization_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_appeals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
+          disable_reason: string | null
           email: string
           id: string
           is_active: boolean
@@ -253,6 +295,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          disable_reason?: string | null
           email: string
           id?: string
           is_active?: boolean
@@ -261,6 +304,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          disable_reason?: string | null
           email?: string
           id?: string
           is_active?: boolean

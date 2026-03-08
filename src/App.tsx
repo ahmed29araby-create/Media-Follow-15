@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,8 +27,52 @@ import FinancialReportsPage from "@/pages/FinancialReportsPage";
 const queryClient = new QueryClient();
 
 function OrgDisabledScreen() {
-  const { signOut, isAdmin } = useAuth();
+  const { signOut, isAdmin, disableReason, user, organizationId } = useAuth();
   const [showSubscription, setShowSubscription] = useState(false);
+  const [showAppeal, setShowAppeal] = useState(false);
+  const [appealText, setAppealText] = useState("");
+  const [submittingAppeal, setSubmittingAppeal] = useState(false);
+  const [appealSent, setAppealSent] = useState(false);
+
+  const isSubscriptionIssue = !disableReason;
+
+  const handleSubmitAppeal = async () => {
+    if (!appealText.trim() || !user || !organizationId) return;
+    setSubmittingAppeal(true);
+    try {
+      const { error } = await supabase.from("org_appeals" as any).insert({
+        organization_id: organizationId,
+        user_id: user.id,
+        message: appealText.trim(),
+      });
+      if (error) throw error;
+
+      // Send notification to super admins
+      const { data: superAdmins } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "super_admin");
+      
+      if (superAdmins) {
+        for (const sa of superAdmins) {
+          await supabase.from("notifications").insert({
+            user_id: sa.user_id,
+            title: "طلب إعادة تفعيل شركة",
+            message: `شركة معطلة أرسلت طلب إعادة تفعيل: "${appealText.trim().substring(0, 100)}"`,
+            type: "appeal",
+            organization_id: organizationId,
+          });
+        }
+      }
+
+      setAppealSent(true);
+      setShowAppeal(false);
+      setAppealText("");
+    } catch {
+      // silently fail
+    }
+    setSubmittingAppeal(false);
+  };
 
   if (showSubscription) {
     return (
@@ -51,25 +96,89 @@ function OrgDisabledScreen() {
         <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-destructive/10 mx-auto">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-destructive" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         </div>
+        
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">تم تعطيل الشركة</h1>
-          <p className="text-base text-muted-foreground">بسبب عدم تجديد الاشتراك</p>
+          {isSubscriptionIssue ? (
+            <p className="text-base text-muted-foreground">بسبب عدم تجديد الاشتراك</p>
+          ) : (
+            <p className="text-base text-muted-foreground">تم تعطيل شركتك من قِبل إدارة المنصة</p>
+          )}
         </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          تم إيقاف الوصول إلى النظام مؤقتاً. يرجى تجديد الاشتراك لاستعادة جميع خدمات الشركة والوصول الكامل للنظام.
-        </p>
-        {isAdmin ? (
-          <button
-            onClick={() => setShowSubscription(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-8 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors w-full"
-          >
-            تجديد الاشتراك
-          </button>
-        ) : (
-          <p className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3">
-            يرجى التواصل مع مسؤول الشركة لتجديد الاشتراك.
+
+        {isSubscriptionIssue ? (
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            تم إيقاف الوصول إلى النظام مؤقتاً. يرجى تجديد الاشتراك لاستعادة جميع خدمات الشركة والوصول الكامل للنظام.
           </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 text-right">
+              <p className="text-xs font-semibold text-destructive mb-1">سبب التعطيل:</p>
+              <p className="text-sm text-foreground leading-relaxed">{disableReason}</p>
+            </div>
+          </div>
         )}
+
+        {isSubscriptionIssue ? (
+          isAdmin ? (
+            <button
+              onClick={() => setShowSubscription(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-8 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors w-full"
+            >
+              تجديد الاشتراك
+            </button>
+          ) : (
+            <p className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3">
+              يرجى التواصل مع مسؤول الشركة لتجديد الاشتراك.
+            </p>
+          )
+        ) : (
+          <>
+            {appealSent ? (
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <p className="text-sm text-primary font-medium">✓ تم إرسال طلبك بنجاح</p>
+                <p className="text-xs text-muted-foreground mt-1">سيتم مراجعة طلبك من قِبل إدارة المنصة والرد عليك في أقرب وقت.</p>
+              </div>
+            ) : showAppeal ? (
+              <div className="space-y-3 text-right">
+                <textarea
+                  value={appealText}
+                  onChange={e => setAppealText(e.target.value)}
+                  placeholder="اكتب رسالتك هنا..."
+                  className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  dir="rtl"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSubmitAppeal}
+                    disabled={submittingAppeal || !appealText.trim()}
+                    className="flex-1 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {submittingAppeal ? "جاري الإرسال..." : "إرسال الطلب"}
+                  </button>
+                  <button
+                    onClick={() => { setShowAppeal(false); setAppealText(""); }}
+                    className="inline-flex items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            ) : isAdmin ? (
+              <button
+                onClick={() => setShowAppeal(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-8 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors w-full"
+              >
+                تقديم طلب إعادة تفعيل
+              </button>
+            ) : (
+              <p className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3">
+                يرجى التواصل مع مسؤول الشركة لتقديم طلب إعادة التفعيل.
+              </p>
+            )}
+          </>
+        )}
+
         <div>
           <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors">تسجيل الخروج</button>
         </div>

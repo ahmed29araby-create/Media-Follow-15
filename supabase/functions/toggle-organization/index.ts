@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
       .single();
     if (!roleCheck) throw new Error("Unauthorized: super_admin only");
 
-    const { organization_id, password, is_active } = await req.json();
+    const { organization_id, password, is_active, disable_reason } = await req.json();
     if (!organization_id || !password || typeof is_active !== "boolean") {
       throw new Error("Missing required fields");
     }
@@ -41,10 +41,17 @@ Deno.serve(async (req) => {
     });
     if (signInError) throw new Error("كلمة المرور غير صحيحة");
 
-    // Update organization status
+    // Update organization status and reason
+    const updateData: Record<string, unknown> = { is_active };
+    if (!is_active && disable_reason) {
+      updateData.disable_reason = disable_reason;
+    } else if (is_active) {
+      updateData.disable_reason = null;
+    }
+
     const { error: updateError } = await adminClient
       .from("organizations")
-      .update({ is_active })
+      .update(updateData)
       .eq("id", organization_id);
     if (updateError) throw updateError;
 

@@ -59,6 +59,7 @@ export default function SuperAdminDashboard() {
   // Toggle (disable/enable) confirmation
   const [toggleOrg, setToggleOrg] = useState<Organization | null>(null);
   const [togglePassword, setTogglePassword] = useState("");
+  const [toggleReason, setToggleReason] = useState("");
   const [toggling, setToggling] = useState(false);
   const [showTogglePassword, setShowTogglePassword] = useState(false);
 
@@ -112,10 +113,14 @@ export default function SuperAdminDashboard() {
 
   const handleToggle = async () => {
     if (!toggleOrg || !togglePassword) return;
+    if (toggleOrg.is_active && !toggleReason.trim()) {
+      toast.error("يرجى كتابة سبب التعطيل");
+      return;
+    }
     setToggling(true);
     const newStatus = !toggleOrg.is_active;
     const { data, error } = await supabase.functions.invoke("toggle-organization", {
-      body: { organization_id: toggleOrg.id, password: togglePassword, is_active: newStatus },
+      body: { organization_id: toggleOrg.id, password: togglePassword, is_active: newStatus, disable_reason: toggleReason.trim() || null },
     });
     if (error || data?.error) {
       toast.error(data?.error || error?.message || "فشلت العملية");
@@ -124,6 +129,7 @@ export default function SuperAdminDashboard() {
       setToggleOrg(null);
       setDetailsOrg(null);
       setTogglePassword("");
+      setToggleReason("");
       fetchOrgs();
     }
     setToggling(false);
@@ -401,7 +407,7 @@ export default function SuperAdminDashboard() {
       </AlertDialog>
 
       {/* Toggle (Disable/Enable) Confirmation */}
-      <AlertDialog open={!!toggleOrg} onOpenChange={(open) => { if (!open) { setToggleOrg(null); setTogglePassword(""); } }}>
+      <AlertDialog open={!!toggleOrg} onOpenChange={(open) => { if (!open) { setToggleOrg(null); setTogglePassword(""); setToggleReason(""); } }}>
         <AlertDialogContent className="bg-card border-border" dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle className={`flex items-center gap-2 ${toggleOrg?.is_active ? "text-destructive" : "text-primary"}`}>
@@ -415,20 +421,34 @@ export default function SuperAdminDashboard() {
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-2 py-2">
-            <Label>أدخل كلمة المرور الخاصة بك للتأكيد</Label>
-            <div className="relative">
-              <Input
-                value={togglePassword}
-                onChange={e => setTogglePassword(e.target.value)}
-                type={showTogglePassword ? "text" : "password"}
-                placeholder="••••••••••••"
-                dir="ltr"
-                className="text-left pr-10"
-              />
-              <button type="button" onClick={() => setShowTogglePassword(!showTogglePassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showTogglePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+          <div className="space-y-3 py-2">
+            {toggleOrg?.is_active && (
+              <div className="space-y-2">
+                <Label>سبب التعطيل <span className="text-destructive">*</span></Label>
+                <textarea
+                  value={toggleReason}
+                  onChange={e => setToggleReason(e.target.value)}
+                  placeholder="اكتب سبب تعطيل الشركة... (سيظهر هذا النص لمسؤول الشركة)"
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  dir="rtl"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>أدخل كلمة المرور الخاصة بك للتأكيد</Label>
+              <div className="relative">
+                <Input
+                  value={togglePassword}
+                  onChange={e => setTogglePassword(e.target.value)}
+                  type={showTogglePassword ? "text" : "password"}
+                  placeholder="••••••••••••"
+                  dir="ltr"
+                  className="text-left pr-10"
+                />
+                <button type="button" onClick={() => setShowTogglePassword(!showTogglePassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showTogglePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
           <AlertDialogFooter>
@@ -436,7 +456,7 @@ export default function SuperAdminDashboard() {
             <Button
               variant={toggleOrg?.is_active ? "destructive" : "default"}
               onClick={handleToggle}
-              disabled={toggling || !togglePassword}
+              disabled={toggling || !togglePassword || (toggleOrg?.is_active && !toggleReason.trim())}
             >
               {toggling && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               {toggleOrg?.is_active ? "تعطيل" : "تفعيل"}
