@@ -70,7 +70,7 @@ export default function SuperAdminDashboard() {
     } else {
       toast.success("تم إنشاء الشركة بنجاح!");
       setDialogOpen(false);
-      setForm({ org_name: "", org_email: "", admin_email: "", admin_password: "", admin_display_name: "" });
+      setForm({ org_name: "", org_email: "", admin_password: "" });
       fetchOrgs();
     }
     setCreating(false);
