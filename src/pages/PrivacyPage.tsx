@@ -77,79 +77,87 @@ export default function PrivacyPage() {
   };
 
   return (
-    <div className="p-6 max-w-2xl space-y-8" dir="rtl">
-      {/* Company name & email centered at top */}
-      {isOrgUser && !orgLoading && (
-        <div className="text-center space-y-1 pb-2 border-b border-border">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{orgName}</h1>
-          <p className="text-sm text-muted-foreground" dir="ltr">{orgEmail}</p>
-        </div>
-      )}
-
-      {/* Sections - flat style, no card shadow */}
-      <div className="space-y-6">
-        {/* Org Name Change */}
-        {isOrgUser && (
-          <section className="space-y-3">
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              تغيير اسم الشركة
-            </h3>
-            <Input value={editOrgName} onChange={(e) => setEditOrgName(e.target.value)} placeholder="اسم الشركة" />
-            <Button size="sm" onClick={saveOrgInfo} disabled={savingOrg}>
-              {savingOrg && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              حفظ التغييرات
-            </Button>
-            <div className="border-b border-border pt-2" />
-          </section>
+    <div className="p-6 flex justify-center" dir="rtl">
+      <div className="w-full max-w-md space-y-8">
+        {/* Company name & email centered at top */}
+        {isOrgUser && !orgLoading && (
+          <div className="text-center space-y-1 pb-4 border-b border-border">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">{orgName}</h1>
+            <p className="text-sm text-muted-foreground" dir="ltr">{orgEmail}</p>
+          </div>
         )}
 
-        {/* Email Change */}
-        <section className="space-y-3">
-          <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-            تغيير البريد الإلكتروني
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            البريد الحالي: <span className="text-foreground" dir="ltr">{user?.email}</span>
-          </p>
-          <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="البريد الإلكتروني الجديد" dir="ltr" className="text-left" />
-          <p className="text-xs text-muted-foreground">سيتم إرسال رسالة تأكيد إلى البريد الجديد قبل التفعيل.</p>
-          <Button size="sm" onClick={handleEmailChange} disabled={emailChangeLoading}>
-            {emailChangeLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-            تغيير البريد
-          </Button>
-          <div className="border-b border-border pt-2" />
-        </section>
+        {/* Sections */}
+        <div className="space-y-6">
+          {/* Org Name Change */}
+          {isOrgUser && (
+            <section className="space-y-3">
+              <h3 className="text-sm font-medium text-foreground flex items-center justify-end gap-2">
+                تغيير اسم الشركة
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+              </h3>
+              <Input value={editOrgName} onChange={(e) => setEditOrgName(e.target.value)} placeholder="اسم الشركة" className="text-right" />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={saveOrgInfo} disabled={savingOrg}>
+                  {savingOrg && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                  حفظ التغييرات
+                </Button>
+              </div>
+              <div className="border-b border-border pt-2" />
+            </section>
+          )}
 
-        {/* Password Change */}
-        <section className="space-y-3">
-          <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-            تغيير كلمة المرور
-          </h3>
-          <div className="space-y-2">
-            <Label htmlFor="current-password">كلمة المرور الحالية</Label>
-            <div className="relative">
-              <Input id="current-password" type={showPasswords ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="كلمة المرور الحالية" dir="ltr" className="text-left pr-10" />
-              <button type="button" onClick={() => setShowPasswords(!showPasswords)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+          {/* Email Change */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-medium text-foreground flex items-center justify-end gap-2">
+              تغيير البريد الإلكتروني
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+            </h3>
+            <p className="text-xs text-muted-foreground text-right">
+              البريد الحالي: <span className="text-foreground" dir="ltr">{user?.email}</span>
+            </p>
+            <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="البريد الإلكتروني الجديد" dir="ltr" className="text-right" />
+            <p className="text-xs text-muted-foreground text-right">سيتم إرسال رسالة تأكيد إلى البريد الجديد قبل التفعيل.</p>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={handleEmailChange} disabled={emailChangeLoading}>
+                {emailChangeLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                تغيير البريد
+              </Button>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-password-privacy">كلمة المرور الجديدة</Label>
-            <Input id="new-password-privacy" type={showPasswords ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="كلمة المرور الجديدة" dir="ltr" className="text-left" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm-new-password-privacy">تأكيد كلمة المرور الجديدة</Label>
-            <Input id="confirm-new-password-privacy" type={showPasswords ? "text" : "password"} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="كلمة المرور يجب أن تكون 12 حرف على الأقل" dir="ltr" className="text-left" />
-          </div>
-          <Button size="sm" onClick={handlePasswordChange} disabled={passwordLoading}>
-            {passwordLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-            تحديث كلمة المرور
-          </Button>
-        </section>
+            <div className="border-b border-border pt-2" />
+          </section>
+
+          {/* Password Change */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-medium text-foreground flex items-center justify-end gap-2">
+              تغيير كلمة المرور
+              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+            </h3>
+            <div className="space-y-2">
+              <Label htmlFor="current-password" className="block text-right">كلمة المرور الحالية</Label>
+              <div className="relative">
+                <Input id="current-password" type={showPasswords ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="كلمة المرور الحالية" dir="ltr" className="text-right pr-10" />
+                <button type="button" onClick={() => setShowPasswords(!showPasswords)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password-privacy" className="block text-right">كلمة المرور الجديدة</Label>
+              <Input id="new-password-privacy" type={showPasswords ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="كلمة المرور الجديدة" dir="ltr" className="text-right" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-new-password-privacy" className="block text-right">تأكيد كلمة المرور الجديدة</Label>
+              <Input id="confirm-new-password-privacy" type={showPasswords ? "text" : "password"} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="كلمة المرور يجب أن تكون 12 حرف على الأقل" dir="ltr" className="text-right" />
+            </div>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={handlePasswordChange} disabled={passwordLoading}>
+                {passwordLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                تحديث كلمة المرور
+              </Button>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );
