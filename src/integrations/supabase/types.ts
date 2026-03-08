@@ -17,23 +17,34 @@ export type Database = {
       admin_settings: {
         Row: {
           id: string
+          organization_id: string | null
           setting_key: string
           setting_value: string
           updated_at: string
         }
         Insert: {
           id?: string
+          organization_id?: string | null
           setting_key: string
           setting_value: string
           updated_at?: string
         }
         Update: {
           id?: string
+          organization_id?: string | null
           setting_key?: string
           setting_value?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "admin_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       change_requests: {
         Row: {
@@ -41,6 +52,7 @@ export type Database = {
           file_id: string
           id: string
           new_file_name: string | null
+          organization_id: string | null
           reason: string | null
           request_type: Database["public"]["Enums"]["request_type"]
           status: Database["public"]["Enums"]["request_status"]
@@ -52,6 +64,7 @@ export type Database = {
           file_id: string
           id?: string
           new_file_name?: string | null
+          organization_id?: string | null
           reason?: string | null
           request_type: Database["public"]["Enums"]["request_type"]
           status?: Database["public"]["Enums"]["request_status"]
@@ -63,6 +76,7 @@ export type Database = {
           file_id?: string
           id?: string
           new_file_name?: string | null
+          organization_id?: string | null
           reason?: string | null
           request_type?: Database["public"]["Enums"]["request_type"]
           status?: Database["public"]["Enums"]["request_status"]
@@ -77,6 +91,13 @@ export type Database = {
             referencedRelation: "files"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "change_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
         ]
       }
       files: {
@@ -87,6 +108,7 @@ export type Database = {
           file_path: string
           file_size: number
           id: string
+          organization_id: string | null
           quality: Database["public"]["Enums"]["quality_type"]
           status: Database["public"]["Enums"]["file_status"]
           storage_path: string | null
@@ -100,6 +122,7 @@ export type Database = {
           file_path: string
           file_size?: number
           id?: string
+          organization_id?: string | null
           quality?: Database["public"]["Enums"]["quality_type"]
           status?: Database["public"]["Enums"]["file_status"]
           storage_path?: string | null
@@ -113,11 +136,136 @@ export type Database = {
           file_path?: string
           file_size?: number
           id?: string
+          organization_id?: string | null
           quality?: Database["public"]["Enums"]["quality_type"]
           status?: Database["public"]["Enums"]["file_status"]
           storage_path?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_settings: {
+        Row: {
+          created_at: string
+          folder_name: string
+          id: string
+          organization_id: string
+          price_per_video: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_name?: string
+          id?: string
+          organization_id: string
+          price_per_video?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_name?: string
+          id?: string
+          organization_id?: string
+          price_per_video?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          organization_id: string | null
+          related_file_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          organization_id?: string | null
+          related_file_id?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          organization_id?: string | null
+          related_file_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_file_id_fkey"
+            columns: ["related_file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -128,6 +276,7 @@ export type Database = {
           display_name: string
           email: string
           id: string
+          organization_id: string | null
           updated_at: string
           user_id: string
         }
@@ -137,6 +286,7 @@ export type Database = {
           display_name: string
           email: string
           id?: string
+          organization_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -146,10 +296,19 @@ export type Database = {
           display_name?: string
           email?: string
           id?: string
+          organization_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -174,6 +333,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_organization_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
