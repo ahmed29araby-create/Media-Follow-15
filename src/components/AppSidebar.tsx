@@ -58,7 +58,13 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const links = isSuperAdmin ? superAdminLinks : isAdmin ? adminLinks : memberLinks;
-  const roleLabel = isSuperAdmin ? "مالك المنصة" : isAdmin ? "مسؤول الشركة" : "عضو فريق";
+  const roleLabel = isSuperAdmin
+    ? "مالك المنصة"
+    : isAdmin
+      ? "مسؤول الشركة"
+      : organizationName
+        ? `عضو فريق في شركة ${organizationName}`
+        : "عضو فريق";
 
   useEffect(() => {
     if (!user) return;
