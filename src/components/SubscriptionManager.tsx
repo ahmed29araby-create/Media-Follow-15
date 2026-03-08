@@ -56,6 +56,12 @@ export default function SubscriptionManager({ organizationId, organizationName }
   const [grantOpen, setGrantOpen] = useState(false);
   const [grantMonths, setGrantMonths] = useState("1");
   const [granting, setGranting] = useState(false);
+  const [grantPassword, setGrantPassword] = useState("");
+
+  // Cancel confirmation
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelPassword, setCancelPassword] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   // Screenshot viewer
   const [viewingScreenshot, setViewingScreenshot] = useState<string | null>(null);
