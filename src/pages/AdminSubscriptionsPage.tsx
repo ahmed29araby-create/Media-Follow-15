@@ -58,12 +58,39 @@ export default function AdminSubscriptionsPage() {
 
   const handleApprove = async (payment: PaymentRequest) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const startsAt = new Date();
-    const endsAt = new Date();
-    endsAt.setMonth(endsAt.getMonth() + payment.months);
 
-    const [subRes, payRes] = await Promise.all([
-      supabase.from("subscriptions").insert({
+    // Check for existing active subscription
+    const { data: existingSubs } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("organization_id", payment.organization_id)
+      .gte("ends_at", new Date().toISOString())
+      .order("ends_at", { ascending: false })
+      .limit(1);
+
+    const existingSub = existingSubs?.[0];
+    const note = `تم الدفع عبر فودافون كاش — رقم المرسل: ${payment.sender_phone || "غير محدد"}`;
+    let subError: any = null;
+
+    if (existingSub) {
+      // Extend existing subscription
+      const newEnd = new Date(existingSub.ends_at);
+      newEnd.setMonth(newEnd.getMonth() + payment.months);
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          ends_at: newEnd.toISOString(),
+          months: existingSub.months + payment.months,
+          amount: Number(existingSub.amount) + payment.amount,
+          notes: `${existingSub.notes || ""}\n+ تجديد ${payment.months} شهر — ${note}`,
+        })
+        .eq("id", existingSub.id);
+      subError = error;
+    } else {
+      const startsAt = new Date();
+      const endsAt = new Date();
+      endsAt.setMonth(endsAt.getMonth() + payment.months);
+      const { error } = await supabase.from("subscriptions").insert({
         organization_id: payment.organization_id,
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
@@ -71,13 +98,15 @@ export default function AdminSubscriptionsPage() {
         amount: payment.amount,
         granted_by: user?.id,
         payment_method: "vodafone_cash",
-        notes: `تم الدفع عبر فودافون كاش — رقم المرسل: ${payment.sender_phone || "غير محدد"}`,
-      }),
-      supabase
-        .from("subscription_payments")
-        .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
-        .eq("id", payment.id),
-    ]);
+        notes: note,
+      });
+      subError = error;
+    }
+
+    await supabase
+      .from("subscription_payments")
+      .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
+      .eq("id", payment.id);
 
     // Re-activate org
     await supabase.from("organizations").update({ is_active: true }).eq("id", payment.organization_id);
@@ -100,7 +129,7 @@ export default function AdminSubscriptionsPage() {
       }
     }
 
-    if (subRes.error || payRes.error) {
+    if (subError) {
       toast.error("حدث خطأ أثناء الموافقة");
     } else {
       toast.success("تم تفعيل الاشتراك بنجاح");
