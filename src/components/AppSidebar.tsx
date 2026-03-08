@@ -226,7 +226,7 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
                 style={{ width: open ? "140px" : "0px", opacity: open ? 1 : 0 }}
               >
                 <p className="text-sm font-semibold text-white truncate text-left leading-tight">
-                  {isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
+                  {isSuperAdmin ? (displayName || organizationName || "مدير المنصة") : isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
                 </p>
               </div>
             </button>
