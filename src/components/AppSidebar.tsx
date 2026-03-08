@@ -172,7 +172,7 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
             </div>
             <div className="p-1.5">
               <button
-                onClick={() => { setProfileMenuOpen(false); window.location.href = "/subscription"; }}
+                onClick={() => { setProfileMenuOpen(false); navigate("/subscription"); }}
                 className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <CreditCard className="h-4 w-4" />
