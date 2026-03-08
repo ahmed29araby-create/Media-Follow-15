@@ -38,7 +38,7 @@ function PasswordInput({ value, onChange, placeholder, show, onMouseDown, onMous
 }
 
 export default function PrivacyPage() {
-  const { user, isAdmin, isSuperAdmin, organizationId } = useAuth();
+  const { user, isAdmin, isSuperAdmin, organizationId, refreshOrgData } = useAuth();
 
   const [orgName, setOrgName] = useState("");
   const [orgEmail, setOrgEmail] = useState("");
@@ -83,6 +83,7 @@ export default function PrivacyPage() {
     else {
       toast.success("تم تحديث اسم الشركة");
       setOrgName(editOrgName.trim());
+      await refreshOrgData();
     }
     setSavingOrg(false);
   };
