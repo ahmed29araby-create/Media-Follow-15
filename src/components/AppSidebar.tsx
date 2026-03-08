@@ -173,9 +173,14 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
           <div className="absolute bottom-full left-1 mb-2 w-56 rounded-lg border border-border/40 bg-sidebar shadow-xl animate-in fade-in-0 slide-in-from-bottom-2 duration-200 z-50">
             <div className="px-3 py-3 border-b border-white/10">
               <p className="text-sm font-medium text-white truncate">
-                {isAdmin ? (organizationName || user?.user_metadata?.display_name || user?.email) : (user?.user_metadata?.display_name || user?.email)}
+                {user?.user_metadata?.display_name || user?.email}
               </p>
-              <p className="text-xs text-white/40 mt-0.5">{roleLabel}</p>
+              <div className="flex items-center justify-between mt-0.5">
+                <span className="text-xs text-white/40">{roleLabel}</span>
+                {!isSuperAdmin && organizationName && (
+                  <span className="text-xs text-white/60 font-medium">{organizationName}</span>
+                )}
+              </div>
             </div>
             <div className="p-1.5">
               <button
