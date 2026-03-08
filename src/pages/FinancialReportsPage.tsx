@@ -191,7 +191,7 @@ export default function FinancialReportsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">{freeSubs.length}</div>
+            <div className="text-3xl font-bold text-foreground">{freeActiveOrgs}</div>
             <p className="text-xs text-muted-foreground mt-1">من صاحب الموقع</p>
           </CardContent>
         </Card>
