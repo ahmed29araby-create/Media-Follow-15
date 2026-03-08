@@ -179,9 +179,17 @@ export default function AuthPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {isSignUp ? "يجب أن تكون 12 حرف على الأقل" : ""}
-            </p>
+            {!isSignUp && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleForgotPassword}
+                disabled={resetLoading}
+              >
+                {resetLoading ? "جاري الإرسال..." : "نسيت كلمة المرور؟"}
+              </Button>
+            )}
           </div>
           <Button type="submit" className="w-full h-11" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
