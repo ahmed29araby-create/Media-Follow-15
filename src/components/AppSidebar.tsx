@@ -63,30 +63,45 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
       .then(({ count }) => setUnreadCount(count ?? 0));
   }, [user]);
 
-  const sidebarWidth = open ? "w-64" : "w-[52px]";
-
   const NavItem = ({ to, icon: Icon, label, badge }: { to: string; icon: any; label: string; badge?: number }) => {
     const active = location.pathname === to;
+
+    const iconEl = (
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+        <Icon className="h-[18px] w-[18px]" />
+      </div>
+    );
+
     const content = (
       <Link
         to={to}
         className={cn(
-          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200",
-          open ? "" : "justify-center px-0",
+          "relative flex items-center rounded-md transition-colors duration-200",
           active
             ? "bg-white/10 text-white"
             : "text-white/70 hover:text-white hover:bg-white/5"
         )}
       >
-        <Icon className="h-[18px] w-[18px] shrink-0" />
-        {open && <span className="truncate">{label}</span>}
-        {open && badge != null && badge > 0 && (
-          <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-            {badge}
-          </span>
-        )}
-        {!open && badge != null && badge > 0 && (
-          <span className="absolute top-0 right-0 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+        {iconEl}
+        <span
+          className="overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out"
+          style={{
+            width: open ? "140px" : "0px",
+            opacity: open ? 1 : 0,
+            marginRight: open ? "0px" : "0px",
+          }}
+        >
+          {label}
+        </span>
+        {badge != null && badge > 0 && (
+          <span
+            className={cn(
+              "flex items-center justify-center rounded-full bg-primary font-bold text-primary-foreground transition-all duration-300",
+              open
+                ? "ml-auto mr-2 h-5 w-5 text-[10px]"
+                : "absolute -top-0.5 -right-0.5 h-3.5 w-3.5 text-[8px]"
+            )}
+          >
             {badge}
           </span>
         )}
@@ -96,9 +111,7 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
     if (!open) {
       return (
         <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <div className="relative">{content}</div>
-          </TooltipTrigger>
+          <TooltipTrigger asChild>{content}</TooltipTrigger>
           <TooltipContent side="right" className="text-xs">
             {label}
           </TooltipContent>
@@ -111,82 +124,79 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
 
   return (
     <aside
-      className={cn(
-        "fixed top-0 left-0 z-50 flex h-screen flex-col bg-sidebar border-r border-border/30 transition-all duration-300 ease-in-out",
-        sidebarWidth
-      )}
+      className="fixed top-0 left-0 z-50 flex h-screen flex-col bg-sidebar border-r border-border/30 transition-[width] duration-300 ease-in-out overflow-hidden"
+      style={{ width: open ? "16rem" : "52px" }}
     >
-      {/* Toggle button */}
-      <div className={cn("flex items-center p-2 pt-3", open ? "justify-start px-3" : "justify-center")}>
+      {/* Toggle button - fixed position, icon never moves */}
+      <div className="flex h-14 items-center px-1.5">
         <button
           onClick={onToggle}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           title={open ? "إغلاق القائمة" : "فتح القائمة"}
         >
           <PanelLeft className="h-5 w-5" />
         </button>
       </div>
 
-      <nav className={cn("flex-1 space-y-1 overflow-y-auto", open ? "p-3" : "px-1.5 py-3")}>
+      <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-1.5">
         {links.map((link) => (
           <NavItem key={link.to} to={link.to} icon={link.icon} label={link.label} />
         ))}
         <NavItem to="/notifications" icon={Bell} label="الإشعارات" badge={unreadCount} />
       </nav>
 
-      <div className={cn("border-t border-white/10", open ? "p-3" : "p-1.5")}>
+      <div className="border-t border-white/10 px-1.5 py-2">
         {/* Profile */}
-        {open ? (
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white shrink-0">
-              {user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-white truncate">
-                {isAdmin ? (organizationName || user?.user_metadata?.display_name || user?.email) : (user?.user_metadata?.display_name || user?.email)}
-              </p>
-              <p className="text-[9px] text-white/40">{roleLabel}</p>
-            </div>
-          </div>
-        ) : (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <div className="flex justify-center py-2 mb-1">
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div className="flex items-center rounded-md py-1.5 transition-colors">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white">
                   {user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
                 </div>
               </div>
-            </TooltipTrigger>
+              <div
+                className="overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out"
+                style={{ width: open ? "140px" : "0px", opacity: open ? 1 : 0 }}
+              >
+                <p className="text-xs font-medium text-white truncate">
+                  {isAdmin ? (organizationName || user?.user_metadata?.display_name || user?.email) : (user?.user_metadata?.display_name || user?.email)}
+                </p>
+                <p className="text-[9px] text-white/40">{roleLabel}</p>
+              </div>
+            </div>
+          </TooltipTrigger>
+          {!open && (
             <TooltipContent side="right" className="text-xs">
               {isAdmin ? (organizationName || user?.user_metadata?.display_name || user?.email) : (user?.user_metadata?.display_name || user?.email)}
             </TooltipContent>
-          </Tooltip>
-        )}
+          )}
+        </Tooltip>
 
         {/* Sign out */}
-        {open ? (
-          <button
-            onClick={signOut}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            تسجيل الخروج
-          </button>
-        ) : (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={signOut}
-                className="flex w-full justify-center items-center rounded-md py-2.5 text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-              >
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={signOut}
+              className="flex w-full items-center rounded-md text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                 <LogOut className="h-[18px] w-[18px]" />
-              </button>
-            </TooltipTrigger>
+              </div>
+              <span
+                className="overflow-hidden whitespace-nowrap text-sm font-medium transition-all duration-300 ease-in-out"
+                style={{ width: open ? "140px" : "0px", opacity: open ? 1 : 0 }}
+              >
+                تسجيل الخروج
+              </span>
+            </button>
+          </TooltipTrigger>
+          {!open && (
             <TooltipContent side="right" className="text-xs">
               تسجيل الخروج
             </TooltipContent>
-          </Tooltip>
-        )}
+          )}
+        </Tooltip>
       </div>
     </aside>
   );
