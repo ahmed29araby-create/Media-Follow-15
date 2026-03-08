@@ -214,9 +214,11 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white">
-                  {isAdmin
-                    ? (organizationName?.charAt(0)?.toUpperCase() || "O")
-                    : (user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase())}
+                  {isSuperAdmin
+                    ? (displayName?.charAt(0)?.toUpperCase() || organizationName?.charAt(0)?.toUpperCase() || "M")
+                    : isAdmin
+                      ? (organizationName?.charAt(0)?.toUpperCase() || "O")
+                      : (user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase())}
                 </div>
               </div>
               <div
