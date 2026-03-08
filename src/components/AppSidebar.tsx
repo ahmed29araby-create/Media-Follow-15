@@ -66,6 +66,17 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
       .then(({ count }) => setUnreadCount(count ?? 0));
   }, [user]);
 
+  // Close profile menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    if (profileMenuOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileMenuOpen]);
+
   const NavItem = ({ to, icon: Icon, label, badge }: { to: string; icon: any; label: string; badge?: number }) => {
     const active = location.pathname === to;
 
