@@ -59,6 +59,7 @@ export default function FinancialReportsPage() {
 
   const [periodType, setPeriodType] = useState<PeriodType>("year");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [expandedCard, setExpandedCard] = useState<"subscribed" | "expired" | "revenue" | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
