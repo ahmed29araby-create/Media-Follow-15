@@ -52,8 +52,6 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const links = isSuperAdmin ? superAdminLinks : isAdmin ? adminLinks : memberLinks;
   const roleLabel = isSuperAdmin ? "مالك المنصة" : isAdmin ? "مسؤول الشركة" : "عضو فريق";
