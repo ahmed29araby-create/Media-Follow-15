@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Bell, Check, Film, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Bell, Check, Film, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ export default function NotificationsPage() {
   const { user, isSuperAdmin } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [processingAppeal, setProcessingAppeal] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetch_ = async () => {
     if (!user) return;
@@ -32,7 +33,6 @@ export default function NotificationsPage() {
 
   useEffect(() => { fetch_(); }, [user]);
 
-  // Realtime
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -53,25 +53,31 @@ export default function NotificationsPage() {
     fetch_();
   };
 
+  const toggleExpand = (n: Notification) => {
+    if (expandedId === n.id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(n.id);
+      if (!n.is_read && n.type !== "appeal") markRead(n.id);
+    }
+  };
+
   const handleAppealAction = async (notification: Notification, approve: boolean) => {
     if (!notification.organization_id) return;
     setProcessingAppeal(notification.id);
     
     try {
-      // Update the appeal status
       await supabase.from("org_appeals" as any)
         .update({ status: approve ? "approved" : "rejected", reviewed_at: new Date().toISOString(), reviewed_by: user?.id })
         .eq("organization_id", notification.organization_id)
         .eq("status", "pending");
 
       if (approve) {
-        // Reactivate the organization
         await supabase
           .from("organizations")
           .update({ is_active: true, disable_reason: null } as any)
           .eq("id", notification.organization_id);
 
-        // Notify org admin
         const { data: orgProfiles } = await supabase
           .from("profiles")
           .select("user_id")
@@ -90,7 +96,6 @@ export default function NotificationsPage() {
         }
         toast.success("تم قبول الطلب وإعادة تفعيل الشركة");
       } else {
-        // Notify org admin of rejection
         const { data: orgProfiles } = await supabase
           .from("profiles")
           .select("user_id")
@@ -110,7 +115,6 @@ export default function NotificationsPage() {
         toast.success("تم رفض الطلب");
       }
 
-      // Mark this notification as read
       await supabase.from("notifications").update({ is_read: true }).eq("id", notification.id);
       fetch_();
     } catch {
@@ -121,11 +125,13 @@ export default function NotificationsPage() {
 
   const getNotificationIcon = (type: string, isRead: boolean) => {
     if (type === "appeal") return <AlertTriangle className={`h-4 w-4 ${isRead ? "text-muted-foreground" : "text-warning"}`} />;
+    if (type === "offer") return <Gift className={`h-4 w-4 ${isRead ? "text-muted-foreground" : "text-primary"}`} />;
     return <Film className={`h-4 w-4 ${isRead ? "text-muted-foreground" : "text-primary"}`} />;
   };
 
   const getNotificationBg = (type: string, isRead: boolean) => {
     if (type === "appeal" && !isRead) return "bg-warning/10";
+    if (type === "offer" && !isRead) return "bg-primary/10";
     return isRead ? "bg-secondary" : "bg-primary/10";
   };
 
@@ -151,51 +157,74 @@ export default function NotificationsPage() {
             <p className="text-sm text-muted-foreground">لا توجد إشعارات</p>
           </div>
         ) : (
-          notifications.map(n => (
-            <div
-              key={n.id}
-              className={`glass-panel p-4 flex items-start gap-3 animate-slide-in transition-opacity ${n.is_read ? "opacity-60" : ""}`}
-              onClick={() => !n.is_read && n.type !== "appeal" && markRead(n.id)}
-            >
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0 ${getNotificationBg(n.type, n.is_read)}`}>
-                {getNotificationIcon(n.type, n.is_read)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{n.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  {new Date(n.created_at).toLocaleDateString("ar", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </p>
-                
-                {/* Appeal actions for super admin */}
-                {n.type === "appeal" && isSuperAdmin && !n.is_read && (
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="gap-1.5 text-xs"
-                      disabled={processingAppeal === n.id}
-                      onClick={(e) => { e.stopPropagation(); handleAppealAction(n, true); }}
-                    >
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      قبول وتفعيل الشركة
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="gap-1.5 text-xs"
-                      disabled={processingAppeal === n.id}
-                      onClick={(e) => { e.stopPropagation(); handleAppealAction(n, false); }}
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                      رفض
-                    </Button>
+          notifications.map(n => {
+            const isExpanded = expandedId === n.id;
+            return (
+              <div
+                key={n.id}
+                className={`glass-panel overflow-hidden transition-all ${n.is_read ? "opacity-60" : ""}`}
+              >
+                {/* Header row - always visible */}
+                <button
+                  onClick={() => toggleExpand(n)}
+                  className="w-full flex items-center gap-3 p-4 text-right hover:bg-accent/5 transition-colors"
+                >
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0 ${getNotificationBg(n.type, n.is_read)}`}>
+                    {getNotificationIcon(n.type, n.is_read)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{n.title}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {new Date(n.created_at).toLocaleDateString("ar", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary" />}
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Expandable detail */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 pt-0 border-t border-border/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+                    <p className="text-sm text-muted-foreground mt-3 whitespace-pre-line leading-relaxed">
+                      {n.message}
+                    </p>
+
+                    {/* Appeal actions for super admin */}
+                    {n.type === "appeal" && isSuperAdmin && !n.is_read && (
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="gap-1.5 text-xs"
+                          disabled={processingAppeal === n.id}
+                          onClick={(e) => { e.stopPropagation(); handleAppealAction(n, true); }}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          قبول وتفعيل الشركة
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="gap-1.5 text-xs"
+                          disabled={processingAppeal === n.id}
+                          onClick={(e) => { e.stopPropagation(); handleAppealAction(n, false); }}
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          رفض
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-              {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-2" />}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
