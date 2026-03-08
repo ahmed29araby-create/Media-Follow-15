@@ -148,7 +148,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
         amount: 0,
         granted_by: user.id,
         payment_method: "free_grant",
-        notes: `تم الدفع من صاحب الموقع لمدة ${months} شهر`,
+        notes: `تم دفع الاشتراك من صاحب الموقع لمدة ${months} شهر`,
       });
       error = insertErr;
     }
