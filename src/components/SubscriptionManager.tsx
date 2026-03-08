@@ -162,6 +162,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
         ? `تم تمديد الاشتراك بـ ${months} شهر إضافي`
         : `تم تفعيل الاشتراك المجاني لمدة ${months} شهر`);
       setGrantOpen(false);
+      setGrantPassword("");
       fetchData();
     }
     setGranting(false);
