@@ -72,70 +72,13 @@ export default function SettingsPage() {
     setDisconnecting(false);
   };
 
-  // ---- Email change ----
-  const handleEmailChange = async () => {
-    const trimmed = newEmail.trim().toLowerCase();
-    if (!trimmed) {
-      toast.error("أدخل البريد الإلكتروني الجديد");
-      return;
-    }
-    if (trimmed === user?.email?.toLowerCase()) {
-      toast.error("البريد الجديد هو نفس البريد الحالي");
-      return;
-    }
-    setEmailChangeLoading(true);
-    const { error } = await supabase.auth.updateUser({ email: trimmed });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("تم إرسال رسالة تأكيد إلى البريد الجديد. تحقق من بريدك لتأكيد التغيير.");
-      setNewEmail("");
-    }
-    setEmailChangeLoading(false);
-  };
-
-  // ---- Password change ----
-  const handlePasswordChange = async () => {
-    if (newPassword.length < 12) {
-      toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل");
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      toast.error("كلمتا المرور غير متطابقتين");
-      return;
-    }
-    setPasswordLoading(true);
-
-    // Verify current password by re-signing in
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user?.email || "",
-      password: currentPassword,
-    });
-    if (signInError) {
-      toast.error("كلمة المرور الحالية غير صحيحة");
-      setPasswordLoading(false);
-      return;
-    }
-
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("تم تحديث كلمة المرور بنجاح");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmNewPassword("");
-    }
-    setPasswordLoading(false);
-  };
-
   if (loading) return <div className="p-6 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="p-6 max-w-2xl space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
-        <p className="text-sm text-muted-foreground">إعدادات الحساب والتكامل</p>
+        <p className="text-sm text-muted-foreground">إعدادات التكامل</p>
       </div>
 
       {/* Account Settings */}
