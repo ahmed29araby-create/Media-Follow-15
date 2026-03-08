@@ -50,13 +50,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    const clientId = Deno.env.get("GOOGLE_CLIENT_ID")?.trim();
+    let clientId = Deno.env.get("GOOGLE_CLIENT_ID")?.trim();
+    // Handle case where user pasted full JSON credentials
+    if (clientId && clientId.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(clientId);
+        clientId = parsed?.web?.client_id || parsed?.installed?.client_id || clientId;
+      } catch { /* not JSON, use as-is */ }
+    }
     console.log("Using client ID prefix:", clientId?.substring(0, 10));
-    if (!clientId) {
-      return new Response(JSON.stringify({ error: "Google Client ID not configured" }), {
+    if (!clientId || !clientId.includes(".apps.googleusercontent.com")) {
+      return new Response(JSON.stringify({ error: "Google Client ID not configured correctly" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    let clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")?.trim();
+    // Handle case where user pasted full JSON credentials into secret too
+    if (clientSecret && clientSecret.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(clientSecret);
+        clientSecret = parsed?.web?.client_secret || parsed?.installed?.client_secret || clientSecret;
+      } catch { /* not JSON, use as-is */ }
     }
 
     const redirectUri = `${supabaseUrl}/functions/v1/google-drive-callback`;
