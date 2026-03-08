@@ -59,6 +59,7 @@ export default function SuperAdminDashboard() {
   // Toggle (disable/enable) confirmation
   const [toggleOrg, setToggleOrg] = useState<Organization | null>(null);
   const [togglePassword, setTogglePassword] = useState("");
+  const [toggleReason, setToggleReason] = useState("");
   const [toggling, setToggling] = useState(false);
   const [showTogglePassword, setShowTogglePassword] = useState(false);
 
