@@ -24,6 +24,8 @@ export default function AuthPage() {
   const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referralCode = searchParams.get("ref");
   const { user } = useAuth();
 
   useEffect(() => {
