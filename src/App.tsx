@@ -162,10 +162,10 @@ function OrgDisabledScreen() {
               </div>
             )}
 
-            {appealSent ? (
+            {appealSent || lastAppealStatus === "pending" ? (
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                <p className="text-sm text-primary font-medium">✓ تم إرسال طلبك بنجاح</p>
-                <p className="text-xs text-muted-foreground mt-1">سيتم مراجعة طلبك من قِبل إدارة المنصة والرد عليك في أقرب وقت.</p>
+                <p className="text-sm text-primary font-medium">⏳ طلبك قيد المراجعة</p>
+                <p className="text-xs text-muted-foreground mt-1">تم إرسال طلبك وهو قيد المراجعة من قِبل إدارة المنصة. سيتم الرد عليك في أقرب وقت.</p>
               </div>
             ) : showAppeal ? (
               <div className="space-y-3 text-right">
