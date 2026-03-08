@@ -22,17 +22,17 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      const queries: Promise<any>[] = [
+      const [folderRes, emailRes] = await Promise.all([
         supabase.from("admin_settings").select("setting_value").eq("setting_key", "drive_folder_path").maybeSingle(),
         supabase.from("admin_settings").select("setting_value").eq("setting_key", "google_drive_email").maybeSingle(),
-      ];
+      ]);
+      if (folderRes.data) setDriveFolderPath(folderRes.data.setting_value);
+      if (emailRes.data) setConnectedEmail(emailRes.data.setting_value);
+
       if (isSuperAdmin) {
-        queries.push(supabase.from("admin_settings").select("setting_value").eq("setting_key", "vodafone_cash_number").maybeSingle());
+        const vodRes = await supabase.from("admin_settings").select("setting_value").eq("setting_key", "vodafone_cash_number").maybeSingle();
+        if (vodRes.data) setVodafoneNumber(vodRes.data.setting_value);
       }
-      const results = await Promise.all(queries);
-      if (results[0].data) setDriveFolderPath(results[0].data.setting_value);
-      if (results[1].data) setConnectedEmail(results[1].data.setting_value);
-      if (isSuperAdmin && results[2]?.data) setVodafoneNumber(results[2].data.setting_value);
       setLoading(false);
     };
     fetchSettings();
