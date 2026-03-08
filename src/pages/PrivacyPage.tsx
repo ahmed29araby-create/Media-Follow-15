@@ -76,6 +76,7 @@ export default function PrivacyPage() {
 
   const saveOrgInfo = async () => {
     if (!editOrgName.trim()) { toast.error("اسم الشركة مطلوب"); return; }
+    if (editOrgName.trim() === orgName) return; // no changes
     setSavingOrg(true);
     const { error } = await supabase.from("organizations").update({ name: editOrgName.trim() }).eq("id", organizationId!);
     if (error) toast.error(error.message);
