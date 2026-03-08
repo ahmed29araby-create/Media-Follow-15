@@ -37,23 +37,32 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const serviceClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Helper: redirect back to app settings with status
-    const redirectToApp = (status: string, message?: string) => {
-      if (appOrigin) {
-        const target = new URL("/settings", appOrigin);
-        target.searchParams.set("google_drive", status);
-        if (message) target.searchParams.set("gd_message", message);
-        return new Response(null, {
-          status: 302,
-          headers: { Location: target.toString() },
-        });
-      }
-      // Fallback: simple close-window HTML
+    // Helper: return HTML that notifies opener and closes popup
+    const closePage = (status: string, message?: string) => {
+      const safeStatus = (status || "").replace(/[<>"'&\\]/g, "");
+      const safeMsg = (message || "").replace(/[<>"'&\\]/g, "");
+      const safeOrigin = (appOrigin || "").replace(/[<>"'&\\]/g, "");
       const color = status === "connected" ? "#22c55e" : "#ef4444";
       const icon = status === "connected" ? "✓" : "✗";
-      const safeMsg = (message || "").replace(/[<>"'&]/g, "");
       return new Response(
-        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google Drive</title></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;font-family:system-ui,sans-serif;color:#fff"><div style="text-align:center"><div style="font-size:64px;color:${color}">${icon}</div><h1 style="font-size:18px">${safeMsg}</h1><p style="color:#888;font-size:14px">يمكنك إغلاق هذه النافذة والعودة للتطبيق</p></div><script>setTimeout(()=>window.close(),2000)</script></body></html>`,
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google Drive</title></head>
+<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;font-family:system-ui,sans-serif;color:#fff">
+<div style="text-align:center">
+  <div style="font-size:64px;color:${color}">${icon}</div>
+  <h1 style="font-size:18px">${safeMsg || (status === "connected" ? "تم الربط بنجاح" : "حدث خطأ")}</h1>
+  <p style="color:#888;font-size:14px">جاري إغلاق النافذة...</p>
+</div>
+<script>
+(function(){
+  try {
+    if (window.opener) {
+      window.opener.postMessage({type:"google-drive-callback",status:"${safeStatus}",email:"${safeMsg}"},"${safeOrigin || "*"}");
+    }
+  } catch(_){}
+  setTimeout(function(){ window.close(); }, 1500);
+})();
+</script>
+</body></html>`,
         { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
       );
     };
