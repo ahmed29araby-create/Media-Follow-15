@@ -173,11 +173,13 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
           <div className="absolute bottom-full left-1 mb-2 w-56 rounded-lg border border-border/40 bg-sidebar shadow-xl animate-in fade-in-0 slide-in-from-bottom-2 duration-200 z-50">
             <div className="px-3 py-3 border-b border-white/10">
               <p className="text-sm font-medium text-white truncate">
-                {user?.user_metadata?.display_name || user?.email}
+                {isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
               </p>
               <div className="flex items-center justify-between mt-0.5">
-                <span className="text-xs text-white/40">{roleLabel}</span>
-                {!isSuperAdmin && organizationName && (
+                <span className="text-xs text-white/40">
+                  {isSuperAdmin ? "مالك المنصة" : isAdmin ? "مسؤول الشركة" : `عضو في الشركة`}
+                </span>
+                {!isSuperAdmin && !isAdmin && organizationName && (
                   <span className="text-xs text-white/60 font-medium">{organizationName}</span>
                 )}
               </div>
@@ -212,7 +214,9 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white">
-                  {user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
+                  {isAdmin
+                    ? (organizationName?.charAt(0)?.toUpperCase() || "O")
+                    : (user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase())}
                 </div>
               </div>
               <div
@@ -220,19 +224,14 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
                 style={{ width: open ? "140px" : "0px", opacity: open ? 1 : 0 }}
               >
                 <p className="text-sm font-semibold text-white truncate text-left leading-tight">
-                  {user?.user_metadata?.display_name || user?.email}
+                  {isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
                 </p>
-                {!isSuperAdmin && organizationName && (
-                  <p className="text-[11px] font-bold text-primary truncate text-left leading-tight mt-0.5">
-                    ({organizationName})
-                  </p>
-                )}
               </div>
             </button>
           </TooltipTrigger>
           {!open && (
             <TooltipContent side="right" className="text-xs">
-              {isAdmin ? (organizationName || user?.user_metadata?.display_name || user?.email) : (user?.user_metadata?.display_name || user?.email)}
+              {isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
             </TooltipContent>
           )}
         </Tooltip>
