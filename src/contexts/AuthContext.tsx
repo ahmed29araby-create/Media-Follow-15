@@ -97,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setDisplayName(null);
       setOrganizationId(null);
       setOrganizationName(null);
+      setDisableReason(null);
       setIsOrgActive(true);
     }
   };
