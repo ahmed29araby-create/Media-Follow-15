@@ -75,7 +75,7 @@ export default function PrivacyPage() {
   }, [organizationId]);
 
   const saveOrgInfo = async () => {
-    if (!editOrgName.trim()) { toast.error("اسم الشركة مطلوب"); return; }
+    if (!editOrgName.trim()) { toast.error("اسم الشركة مطلوب", { id: "org-name-required" }); return; }
     if (editOrgName.trim() === orgName) return; // no changes
     setSavingOrg(true);
     const { error } = await supabase.from("organizations").update({ name: editOrgName.trim() }).eq("id", organizationId!);
@@ -90,8 +90,8 @@ export default function PrivacyPage() {
 
   const handleEmailChange = async () => {
     const trimmed = editOrgEmail.trim().toLowerCase();
-    if (!trimmed) { toast.error("أدخل البريد الإلكتروني"); return; }
-    if (trimmed === orgEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي"); return; }
+    if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
+    if (trimmed === orgEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
     setEmailChangeLoading(true);
     // Update org email in DB
     const { error } = await supabase.from("organizations").update({ email: trimmed }).eq("id", organizationId!);
@@ -104,14 +104,14 @@ export default function PrivacyPage() {
   };
 
   const handlePasswordChange = async () => {
-    if (!currentPassword) { toast.error("أدخل كلمة المرور الحالية"); return; }
-    if (!newPassword) { toast.error("أدخل كلمة المرور الجديدة"); return; }
-    if (newPassword.length < 12) { toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل"); return; }
-    if (!confirmNewPassword) { toast.error("أدخل تأكيد كلمة المرور"); return; }
-    if (newPassword !== confirmNewPassword) { toast.error("كلمتا المرور غير متطابقتين"); return; }
+    if (!currentPassword) { toast.error("أدخل كلمة المرور الحالية", { id: "pw-current-required" }); return; }
+    if (!newPassword) { toast.error("أدخل كلمة المرور الجديدة", { id: "pw-new-required" }); return; }
+    if (newPassword.length < 12) { toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل", { id: "pw-min-length" }); return; }
+    if (!confirmNewPassword) { toast.error("أدخل تأكيد كلمة المرور", { id: "pw-confirm-required" }); return; }
+    if (newPassword !== confirmNewPassword) { toast.error("كلمتا المرور غير متطابقتين", { id: "pw-mismatch" }); return; }
     setPasswordLoading(true);
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: user?.email || "", password: currentPassword });
-    if (signInError) { toast.error("كلمة المرور الحالية غير صحيحة"); setPasswordLoading(false); return; }
+    if (signInError) { toast.error("كلمة المرور الحالية غير صحيحة", { id: "pw-current-wrong" }); setPasswordLoading(false); return; }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) toast.error(error.message);
     else { toast.success("تم تحديث كلمة المرور بنجاح"); setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword(""); }
