@@ -14,6 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Building2, Plus, Users, Activity, Loader2, Eye, EyeOff, CheckCircle, XCircle, Shield, Globe, Zap, Info, Trash2, CalendarDays, Ban, Power } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Organization {
   id: string;
@@ -27,6 +28,7 @@ export default function SuperAdminDashboard() {
   const { user } = useAuth();
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "active" | "disabled">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -119,10 +121,13 @@ export default function SuperAdminDashboard() {
   };
 
   const stats = [
-    { label: "إجمالي الشركات", value: orgs.length, icon: Building2, accent: "text-primary", bg: "bg-primary/10" },
-    { label: "شركات نشطة", value: orgs.filter(o => o.is_active).length, icon: Activity, accent: "text-success", bg: "bg-success/10" },
-    { label: "شركات معطلة", value: orgs.filter(o => !o.is_active).length, icon: XCircle, accent: "text-destructive", bg: "bg-destructive/10" },
+    { label: "إجمالي الشركات", value: orgs.length, icon: Building2, accent: "text-primary", bg: "bg-primary/10", filterKey: "all" as const },
+    { label: "شركات نشطة", value: orgs.filter(o => o.is_active).length, icon: Activity, accent: "text-success", bg: "bg-success/10", filterKey: "active" as const },
+    { label: "شركات معطلة", value: orgs.filter(o => !o.is_active).length, icon: XCircle, accent: "text-destructive", bg: "bg-destructive/10", filterKey: "disabled" as const },
   ];
+
+  const filteredOrgs = filter === "all" ? orgs : filter === "active" ? orgs.filter(o => o.is_active) : orgs.filter(o => !o.is_active);
+  const filterTitle = filter === "all" ? "الشركات المسجلة" : filter === "active" ? "الشركات النشطة" : "الشركات المعطلة";
 
   return (
     <div className="p-6 space-y-8" dir="rtl">
@@ -199,7 +204,11 @@ export default function SuperAdminDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {stats.map(s => (
-          <Card key={s.label} className="glass-panel border-border/50 hover:border-primary/30 transition-colors">
+          <Card
+            key={s.label}
+            className={`glass-panel border-border/50 hover:border-primary/30 transition-colors cursor-pointer ${filter === s.filterKey ? "ring-2 ring-primary border-primary/40" : ""}`}
+            onClick={() => setFilter(s.filterKey)}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{s.label}</CardTitle>
               <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${s.bg}`}>
@@ -218,33 +227,44 @@ export default function SuperAdminDashboard() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
-            الشركات المسجلة
+            {filterTitle}
           </h2>
-          <span className="text-xs text-muted-foreground">{orgs.length} شركة</span>
+          <span className="text-xs text-muted-foreground">{filteredOrgs.length} شركة</span>
         </div>
         {loading ? (
           <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : orgs.length === 0 ? (
+        ) : filteredOrgs.length === 0 ? (
           <div className="glass-panel p-12 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mx-auto mb-4">
               <Building2 className="h-8 w-8 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground mb-4">لا توجد شركات بعد — ابدأ بإنشاء أول شركة</p>
-            <Button onClick={() => setDialogOpen(true)} variant="outline">
-              <Plus className="ml-2 h-4 w-4" />
-              إنشاء شركة
-            </Button>
+            <p className="text-sm text-muted-foreground mb-4">
+              {filter === "all" ? "لا توجد شركات بعد — ابدأ بإنشاء أول شركة" : filter === "active" ? "لا توجد شركات نشطة" : "لا توجد شركات معطلة"}
+            </p>
+            {filter === "all" && (
+              <Button onClick={() => setDialogOpen(true)} variant="outline">
+                <Plus className="ml-2 h-4 w-4" />
+                إنشاء شركة
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid gap-3">
-            {orgs.map((org, i) => (
+            {filteredOrgs.map((org, i) => (
               <div key={org.id} className="glass-panel p-5 flex items-center justify-between hover:border-primary/20 transition-all group" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
                     <Building2 className="h-6 w-6 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">{org.name}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-foreground">{org.name}</p>
+                      {org.is_active ? (
+                        <Badge className="bg-success/15 text-success border-success/30 text-[10px] px-1.5 py-0">نشطة</Badge>
+                      ) : (
+                        <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px] px-1.5 py-0">معطلة</Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground" dir="ltr">{org.email}</p>
                   </div>
                 </div>
