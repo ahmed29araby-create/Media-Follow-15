@@ -36,6 +36,7 @@ const memberLinks = [
   { to: "/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
   { to: "/upload", label: "رفع ملفات", icon: Upload },
   { to: "/files", label: "ملفاتي", icon: FolderOpen },
+  { to: "/privacy", label: "الخصوصية", icon: ShieldCheck },
 ];
 
 export default function AppSidebar() {
