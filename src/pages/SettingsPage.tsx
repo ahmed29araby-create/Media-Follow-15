@@ -79,8 +79,8 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6 max-w-2xl space-y-6" dir="rtl">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
+      <div className="text-center space-y-1 pb-4 border-b border-border">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>الإعدادات</h1>
         <p className="text-sm text-muted-foreground">إعدادات الشركة والتكامل</p>
       </div>
 
