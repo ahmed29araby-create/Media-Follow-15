@@ -145,6 +145,9 @@ export default function SubscriptionManager({ organizationId, organizationName }
         .eq("id", payment.id),
     ]);
 
+    // Re-activate org
+    await supabase.from("organizations").update({ is_active: true }).eq("id", payment.organization_id);
+
     if (subErr.error || payErr.error) {
       toast.error("حدث خطأ أثناء الموافقة");
     } else {

@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 const PLAN_PRICE = 400;
-const VODAFONE_NUMBER = "01012345678"; // رقم فودافون كاش المؤقت
 
 interface Subscription {
   id: string;
@@ -45,6 +44,7 @@ export default function SubscriptionPage() {
   const [senderPhone, setSenderPhone] = useState("");
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [vodafoneNumber, setVodafoneNumber] = useState("01012345678");
 
   const fetchData = async () => {
     if (!organizationId) return;
@@ -69,6 +69,10 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     fetchData();
+    // Fetch vodafone number setting
+    supabase.from("admin_settings").select("setting_value").eq("setting_key", "vodafone_cash_number").maybeSingle().then(({ data }) => {
+      if (data) setVodafoneNumber(data.setting_value);
+    });
   }, [organizationId]);
 
   const isActive = subscription && new Date(subscription.ends_at) > new Date();
@@ -253,7 +257,7 @@ export default function SubscriptionPage() {
                 </li>
                 <li className="flex items-center gap-2 mr-4">
                   <Phone className="h-4 w-4 text-primary" />
-                  <span className="font-mono font-bold text-foreground text-lg" dir="ltr">{VODAFONE_NUMBER}</span>
+                  <span className="font-mono font-bold text-foreground text-lg" dir="ltr">{vodafoneNumber}</span>
                 </li>
                 <li>بعد التحويل، أدخل رقم الهاتف المُحوَّل منه وارفع صورة الإيصال</li>
               </ol>

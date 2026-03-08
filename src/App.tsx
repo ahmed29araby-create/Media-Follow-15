@@ -19,6 +19,7 @@ import NotFound from "@/pages/NotFound";
 import PrivacyPage from "@/pages/PrivacyPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import SubscriptionPage from "@/pages/SubscriptionPage";
+import AdminSubscriptionsPage from "@/pages/AdminSubscriptionsPage";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ function ProtectedRoutes() {
         {isAdmin && <Route path="/moderation" element={<ModerationPage />} />}
         {(isAdmin || isSuperAdmin) && <Route path="/settings" element={<SettingsPage />} />}
         {isSuperAdmin && <Route path="/admin-dashboard" element={<AdminDashboard />} />}
+        {isSuperAdmin && <Route path="/admin-subscriptions" element={<AdminSubscriptionsPage />} />}
         <Route path="/privacy" element={<PrivacyPage />} />
         {isAdmin && <Route path="/subscription" element={<SubscriptionPage />} />}
 

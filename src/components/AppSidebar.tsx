@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 const superAdminLinks = [
   { to: "/dashboard", label: "لوحة تحكم الموقع", icon: Globe },
+  { to: "/admin-subscriptions", label: "الاشتراكات", icon: CreditCard },
   { to: "/settings", label: "الإعدادات", icon: Settings },
   { to: "/privacy", label: "الخصوصية", icon: ShieldCheck },
 ];
