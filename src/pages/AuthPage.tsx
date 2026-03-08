@@ -30,7 +30,11 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) navigate("/dashboard", { replace: true });
-  }, [user, navigate]);
+    // Store referral code in localStorage for later use during org creation
+    if (referralCode) {
+      localStorage.setItem("referral_code", referralCode);
+    }
+  }, [user, navigate, referralCode]);
 
   // Lockout countdown
   useEffect(() => {
