@@ -90,9 +90,27 @@ export default function SettingsPage() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       const popup = window.open(data.auth_url, "google-drive-auth", "width=500,height=700,scrollbars=yes");
-      const interval = setInterval(async () => {
+
+      // Listen for message from popup
+      const onMessage = async (event: MessageEvent) => {
+        if (event.data?.type !== "google-drive-callback") return;
+        window.removeEventListener("message", onMessage);
+        clearInterval(fallback);
+        if (event.data.status === "connected" && event.data.email) {
+          setConnectedEmail(event.data.email);
+          toast.success("تم ربط Google Drive بنجاح!");
+        } else {
+          toast.error(event.data.email || "فشل الاتصال");
+        }
+        setConnecting(false);
+      };
+      window.addEventListener("message", onMessage);
+
+      // Fallback: poll popup closed
+      const fallback = setInterval(async () => {
         if (popup?.closed) {
-          clearInterval(interval);
+          clearInterval(fallback);
+          window.removeEventListener("message", onMessage);
           const { data: emailData } = await supabase.from("admin_settings").select("setting_value").eq("setting_key", "google_drive_email").maybeSingle();
           if (emailData) { setConnectedEmail(emailData.setting_value); toast.success("تم ربط Google Drive بنجاح!"); }
           setConnecting(false);

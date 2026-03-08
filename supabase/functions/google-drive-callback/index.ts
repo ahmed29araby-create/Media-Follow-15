@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
       { onConflict: "setting_key" },
     );
 
-    return redirectToApp("connected", connectedEmail);
+    return closePage("connected", connectedEmail);
   } catch (err) {
     console.error("Callback error:", err);
     return new Response(
