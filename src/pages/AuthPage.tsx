@@ -109,16 +109,22 @@ export default function AuthPage() {
       toast.error("اكتب البريد الإلكتروني أولاً");
       return;
     }
+
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
+
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("تم إرسال رسالة استعادة كلمة المرور إلى بريدك الإلكتروني. يمكنك الضغط على الرابط في الرسالة أو إدخال رمز التحقق هنا.");
+      setOtpCode("");
+      setOtpExpiresAt(Date.now() + OTP_EXPIRY_SECONDS * 1000);
+      setOtpRemaining(OTP_EXPIRY_SECONDS);
       setStep("forgot-otp");
+      toast.success("تم إرسال رمز التحقق المكون من 6 أرقام، وصلاحيته 5 دقائق");
     }
+
     setLoading(false);
   };
 
@@ -128,18 +134,27 @@ export default function AuthPage() {
       toast.error("أدخل رمز التحقق المكون من 6 أرقام");
       return;
     }
+
+    if (!otpExpiresAt || isOtpExpired) {
+      toast.error("انتهت صلاحية الرمز بعد 5 دقائق، اطلب رمزاً جديداً");
+      setOtpCode("");
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.verifyOtp({
       email: normalizedEmail,
       token: otpCode,
       type: "recovery",
     });
+
     if (error) {
       toast.error("رمز التحقق غير صحيح أو منتهي الصلاحية");
     } else {
       toast.success("تم التحقق بنجاح! أدخل كلمة المرور الجديدة");
       setStep("forgot-newpass");
     }
+
     setLoading(false);
   };
 
