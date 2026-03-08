@@ -28,9 +28,9 @@ Deno.serve(async (req) => {
       .single();
     if (!roleCheck) throw new Error("Unauthorized: super_admin only");
 
-    const { org_name, org_email, admin_email, admin_password, admin_display_name } = await req.json();
+    const { org_name, org_email, admin_password } = await req.json();
 
-    if (!org_name || !org_email || !admin_email || !admin_password || !admin_display_name) {
+    if (!org_name || !org_email || !admin_password) {
       throw new Error("Missing required fields");
     }
     if (admin_password.length < 12) throw new Error("Password must be at least 12 characters");
@@ -45,13 +45,13 @@ Deno.serve(async (req) => {
       .single();
     if (orgError) throw orgError;
 
-    // Create admin user
+    // Create admin user using org email and org name as display name
     const { data: newUser, error: userError } = await adminClient.auth.admin.createUser({
-      email: admin_email,
+      email: org_email,
       password: admin_password,
       email_confirm: true,
       user_metadata: {
-        display_name: admin_display_name,
+        display_name: org_name,
         organization_id: org.id,
         account_status: "approved",
       },
