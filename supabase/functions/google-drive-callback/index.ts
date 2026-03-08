@@ -68,11 +68,11 @@ Deno.serve(async (req) => {
     };
 
     if (error) {
-      return redirectToApp("error", `Authorization denied: ${error}`);
+      return closePage("error", `Authorization denied: ${error}`);
     }
 
     if (!code || !state || !userId) {
-      return redirectToApp("error", "Missing authorization code");
+      return closePage("error", "Missing authorization code");
     }
 
     // Verify user is admin
