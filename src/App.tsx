@@ -15,6 +15,7 @@ import AdminTeamPage from "@/pages/AdminTeamPage";
 import SettingsPage from "@/pages/SettingsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import NotFound from "@/pages/NotFound";
+import PrivacyPage from "@/pages/PrivacyPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
