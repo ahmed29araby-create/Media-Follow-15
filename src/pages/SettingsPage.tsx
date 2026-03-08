@@ -90,7 +90,7 @@ export default function SettingsPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><Link2 className="h-4 w-4 text-primary" /></div>
           <div>
             <h2 className="text-sm font-semibold text-foreground">اتصال Google Drive</h2>
-            <p className="text-xs text-muted-foreground">ربط حساب Google Drive لمزامنة الملفات</p>
+            
           </div>
         </div>
 
