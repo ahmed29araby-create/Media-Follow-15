@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import PlanCards, { PLANS, type Plan } from "@/components/subscription/PlanCards";
 import UseCreditsSection from "@/components/referral/UseCreditsSection";
+import DiscountCodeInput from "@/components/referral/DiscountCodeInput";
 
 interface Subscription {
   id: string;
@@ -51,6 +52,12 @@ export default function SubscriptionPage() {
   const [creditAmount, setCreditAmount] = useState(0);
   const [creditIds, setCreditIds] = useState<string[]>([]);
 
+  // Discount code state
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountCodeOrgId, setDiscountCodeOrgId] = useState("");
+
   const fetchData = async () => {
     if (!organizationId) return;
     const [subRes, payRes] = await Promise.all([
@@ -88,17 +95,30 @@ export default function SubscriptionPage() {
   const handleSelectPlan = (plan: Plan) => {
     setSelectedPlan(plan);
     setShowPaymentForm(true);
-    // scroll to payment form
     setTimeout(() => document.getElementById("payment-form")?.scrollIntoView({ behavior: "smooth" }), 100);
   };
 
-  const finalPrice = selectedPlan ? (creditApplied ? Math.max(0, selectedPlan.price - creditAmount) : selectedPlan.price) : 0;
-  const isFullyCoveredByCredit = creditApplied && finalPrice === 0;
+  const totalDiscount = (discountApplied ? discountAmount : 0) + (creditApplied ? creditAmount : 0);
+  const finalPrice = selectedPlan ? Math.max(0, selectedPlan.price - totalDiscount) : 0;
+  const isFullyCoveredByCredit = finalPrice === 0 && (creditApplied || discountApplied);
+
+  const resetForm = () => {
+    setSenderPhone("");
+    setScreenshotFile(null);
+    setShowPaymentForm(false);
+    setSelectedPlan(null);
+    setCreditApplied(false);
+    setCreditAmount(0);
+    setCreditIds([]);
+    setDiscountApplied(false);
+    setDiscountAmount(0);
+    setDiscountCode("");
+    setDiscountCodeOrgId("");
+  };
 
   const handleSubmitPayment = async () => {
     if (!user || !organizationId || !selectedPlan) return;
 
-    // If fully covered by credit, no need for phone/screenshot
     if (!isFullyCoveredByCredit) {
       if (!senderPhone.trim()) {
         toast.error("أدخل رقم الهاتف المُحوَّل منه");
@@ -124,10 +144,9 @@ export default function SubscriptionPage() {
         screenshotPath = path;
       }
 
-      // Deduct credits if applied
+      // Deduct referral credits if applied
       if (creditApplied && creditAmount > 0) {
         let remainingToDeduct = creditAmount;
-        // Get credits ordered by expiry
         const { data: creditsData } = await supabase
           .from("referral_credits")
           .select("id, remaining")
@@ -147,7 +166,6 @@ export default function SubscriptionPage() {
       }
 
       if (isFullyCoveredByCredit) {
-        // Auto-approve: create subscription directly
         const startsAt = new Date();
         const endsAt = new Date();
         endsAt.setMonth(endsAt.getMonth() + 1);
@@ -158,12 +176,17 @@ export default function SubscriptionPage() {
           months: 1,
           amount: 0,
           payment_method: "referral_credit",
-          notes: `تم الدفع بالكامل من رصيد الإحالة — باقة ${selectedPlan.name} (${selectedPlan.price} جنيه)`,
+          notes: `تم الدفع بالكامل من الخصم/الرصيد — باقة ${selectedPlan.name} (${selectedPlan.price} جنيه)`,
         });
         await supabase.from("organizations").update({ is_active: true }).eq("id", organizationId);
-        toast.success("تم تفعيل الاشتراك باستخدام رصيد الإحالة!");
+
+        // If discount code was used, create referral and grant credit to code owner
+        if (discountApplied && discountCode) {
+          await grantCodeOwnerCredit(selectedPlan.price);
+        }
+
+        toast.success("تم تفعيل الاشتراك!");
       } else {
-        // Submit payment request
         const { error: insertErr } = await supabase.from("subscription_payments").insert({
           organization_id: organizationId,
           user_id: user.id,
@@ -172,26 +195,63 @@ export default function SubscriptionPage() {
           sender_phone: senderPhone.trim() || null,
           screenshot_path: screenshotPath,
           status: "pending",
+          referral_code_used: discountApplied ? discountCode : null,
         });
         if (insertErr) throw insertErr;
-        toast.success(creditApplied
-          ? `تم إرسال طلب الاشتراك بخصم ${creditAmount} جنيه! في انتظار الموافقة.`
-          : "تم إرسال طلب الاشتراك بنجاح! في انتظار الموافقة."
-        );
+        toast.success("تم إرسال طلب الاشتراك بنجاح! في انتظار الموافقة.");
       }
 
-      setSenderPhone("");
-      setScreenshotFile(null);
-      setShowPaymentForm(false);
-      setSelectedPlan(null);
-      setCreditApplied(false);
-      setCreditAmount(0);
-      setCreditIds([]);
+      resetForm();
       fetchData();
     } catch (err: any) {
       toast.error(err.message || "حدث خطأ أثناء الإرسال");
     }
     setSubmitting(false);
+  };
+
+  const grantCodeOwnerCredit = async (originalPrice: number) => {
+    try {
+      // Get referral percentage for code owner
+      const { data: pctSetting } = await supabase
+        .from("admin_settings")
+        .select("setting_value")
+        .eq("setting_key", "referral_percentage")
+        .is("organization_id", null)
+        .maybeSingle();
+      const percentage = Number(pctSetting?.setting_value ?? 50);
+
+      const { data: expSetting } = await supabase
+        .from("admin_settings")
+        .select("setting_value")
+        .eq("setting_key", "credit_expiry_months")
+        .is("organization_id", null)
+        .maybeSingle();
+      const expiryMonths = Number(expSetting?.setting_value ?? 6);
+
+      const codeOwnerOrgId = discountCodeOrgId;
+      if (!codeOwnerOrgId) return;
+
+      // Create referral record
+      const { data: referral } = await supabase.from("referrals").insert({
+        referrer_org_id: codeOwnerOrgId,
+        referred_org_id: organizationId!,
+      }).select("id").single();
+
+      const creditAmt = Math.round(originalPrice * percentage / 100);
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + expiryMonths);
+
+      await supabase.from("referral_credits").insert({
+        organization_id: codeOwnerOrgId,
+        amount: creditAmt,
+        remaining: creditAmt,
+        referral_id: referral?.id || null,
+        source_description: `استخدام كود الخصم — اشتراك ${originalPrice} جنيه`,
+        expires_at: expiresAt.toISOString(),
+      });
+    } catch (e) {
+      console.error("Error granting code owner credit:", e);
+    }
   };
 
   const formatDate = (d: string) =>
@@ -287,23 +347,43 @@ export default function SubscriptionPage() {
         <Card className="border-border/50" id="payment-form">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center justify-between">
-              <span>{isFullyCoveredByCredit ? "الدفع بالرصيد" : "الدفع عبر فودافون كاش"}</span>
+              <span>{isFullyCoveredByCredit ? "الدفع بالخصم/الرصيد" : "الدفع عبر فودافون كاش"}</span>
               <div className="flex items-center gap-2">
-                {creditApplied && (
+                {(discountApplied || creditApplied) && (
                   <Badge className="bg-success/15 text-success border-success/30 text-xs">
-                    خصم {creditAmount.toLocaleString()} ج
+                    خصم {totalDiscount.toLocaleString()} ج
                   </Badge>
                 )}
                 <Badge variant="outline" className="text-primary border-primary/30">
-                  {selectedPlan.name} — {creditApplied ? `${finalPrice.toLocaleString()} جنيه` : `${selectedPlan.price.toLocaleString()} جنيه`}
+                  {selectedPlan.name} — {totalDiscount > 0 ? `${finalPrice.toLocaleString()} جنيه` : `${selectedPlan.price.toLocaleString()} جنيه`}
                 </Badge>
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Discount Code Input */}
+            <DiscountCodeInput
+              planPrice={selectedPlan.price}
+              onDiscountApplied={(amount, code, orgId) => {
+                setDiscountApplied(true);
+                setDiscountAmount(amount);
+                setDiscountCode(code);
+                setDiscountCodeOrgId(orgId);
+              }}
+              onDiscountRemoved={() => {
+                setDiscountApplied(false);
+                setDiscountAmount(0);
+                setDiscountCode("");
+                setDiscountCodeOrgId("");
+              }}
+              applied={discountApplied}
+              appliedCode={discountCode}
+              discountAmount={discountAmount}
+            />
+
             {/* Use Credits Section */}
             <UseCreditsSection
-              planPrice={selectedPlan.price}
+              planPrice={selectedPlan.price - (discountApplied ? discountAmount : 0)}
               onCreditApplied={(amount, ids) => {
                 setCreditApplied(true);
                 setCreditAmount(amount);
@@ -367,9 +447,9 @@ export default function SubscriptionPage() {
             <div className="flex gap-3">
               <Button onClick={handleSubmitPayment} disabled={submitting} className="flex-1 gap-2">
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                {isFullyCoveredByCredit ? "تفعيل الباقة بالرصيد" : "إرسال طلب الاشتراك"}
+                {isFullyCoveredByCredit ? "تفعيل الباقة" : "إرسال طلب الاشتراك"}
               </Button>
-              <Button variant="outline" onClick={() => { setShowPaymentForm(false); setSelectedPlan(null); setCreditApplied(false); setCreditAmount(0); }}>
+              <Button variant="outline" onClick={resetForm}>
                 إلغاء
               </Button>
             </div>
