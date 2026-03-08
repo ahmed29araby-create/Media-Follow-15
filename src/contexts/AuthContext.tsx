@@ -16,8 +16,10 @@ interface AuthContextType {
   organizationId: string | null;
   organizationName: string | null;
   isOrgActive: boolean;
+  displayName: string | null;
   signOut: () => Promise<void>;
   refreshOrgData: () => Promise<void>;
+  refreshDisplayName: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
