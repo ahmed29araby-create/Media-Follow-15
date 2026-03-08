@@ -14,6 +14,7 @@ import {
   PanelLeft,
   CreditCard,
   BarChart3,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
@@ -26,6 +27,7 @@ const superAdminLinks = [
   { to: "/financial-reports", label: "التقارير المالية", icon: BarChart3 },
   { to: "/settings", label: "الإعدادات", icon: Settings },
   { to: "/privacy", label: "الخصوصية", icon: ShieldCheck },
+  { to: "/offers", label: "العروض", icon: Gift },
 ];
 
 const adminLinks = [
