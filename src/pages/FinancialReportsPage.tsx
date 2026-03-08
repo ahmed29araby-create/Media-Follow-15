@@ -316,7 +316,7 @@ export default function FinancialReportsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">إجمالي الإيرادات</CardTitle>
@@ -326,20 +326,6 @@ export default function FinancialReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground mt-1">من {approvedPayments.length} عملية دفع مؤكدة</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">إيرادات فودافون كاش</CardTitle>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-              <CreditCard className="h-4 w-4 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-foreground">{formatCurrency(paidRevenue)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{approvedPayments.length} عملية دفع مؤكدة</p>
           </CardContent>
         </Card>
 
