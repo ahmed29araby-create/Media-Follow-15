@@ -14,6 +14,7 @@ import {
   PanelLeft,
   CreditCard,
   BarChart3,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
