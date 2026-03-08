@@ -152,7 +152,7 @@ export default function AdminSubscriptionsPage() {
 
     // === REFERRAL CODE CREDIT LOGIC ===
     try {
-      const codeUsed = (payment as any).referral_code_used;
+      const codeUsed = payment.referral_code_used;
       if (codeUsed) {
         // Find the code owner
         const { data: codeData } = await supabase
