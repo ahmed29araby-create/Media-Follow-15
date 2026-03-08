@@ -18,6 +18,7 @@ import NotificationsPage from "@/pages/NotificationsPage";
 import NotFound from "@/pages/NotFound";
 import PrivacyPage from "@/pages/PrivacyPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import SubscriptionPage from "@/pages/SubscriptionPage";
 
 const queryClient = new QueryClient();
 
