@@ -156,19 +156,25 @@ export default function FinancialReportsPage() {
   }, [uniqueOrgSubsInPeriod, orgs]);
   const newSubsCount = subscribedOrgsInPeriod.length;
 
-  // Expired subs in period — subs whose ends_at falls in this period
+  // Expired subs in period — subs whose ends_at falls in this period, BUT only if the org doesn't have a newer active subscription
   const expiredOrgsInPeriod = useMemo(() => {
     const seen = new Set<string>();
     const results: { sub: Subscription; org: OrgInfo | undefined }[] = [];
     for (const s of subscriptions) {
       const endDate = new Date(s.ends_at);
       if (endDate >= dateRange.start && endDate <= dateRange.end && endDate <= now && !seen.has(s.organization_id)) {
+        // Check if this org has a newer active subscription
+        const latest = latestSubPerOrg[s.organization_id];
+        if (latest && new Date(latest.ends_at) > now) {
+          // Org renewed — skip
+          continue;
+        }
         seen.add(s.organization_id);
         results.push({ sub: s, org: orgs[s.organization_id] });
       }
     }
     return results;
-  }, [subscriptions, dateRange, now, orgs]);
+  }, [subscriptions, dateRange, now, orgs, latestSubPerOrg]);
   const expiredInPeriod = expiredOrgsInPeriod.length;
 
   // Chart data based on period type
