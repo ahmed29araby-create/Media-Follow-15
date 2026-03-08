@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 const PLAN_PRICE = 400;
-const VODAFONE_NUMBER = "01012345678"; // رقم فودافون كاش المؤقت
 
 interface Subscription {
   id: string;
