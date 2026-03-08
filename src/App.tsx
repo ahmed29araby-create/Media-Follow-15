@@ -23,6 +23,7 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import SubscriptionPage from "@/pages/SubscriptionPage";
 import AdminSubscriptionsPage from "@/pages/AdminSubscriptionsPage";
 import FinancialReportsPage from "@/pages/FinancialReportsPage";
+import OffersPage from "@/pages/OffersPage";
 
 const queryClient = new QueryClient();
 
