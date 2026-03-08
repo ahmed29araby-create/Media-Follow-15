@@ -148,20 +148,28 @@ export default function FinancialReportsPage() {
   const totalRevenue = paidRevenue;
 
   // New subs in period (unique orgs that got a subscription)
-  const newSubsCount = Object.keys(uniqueOrgSubsInPeriod).length;
+  const subscribedOrgsInPeriod = useMemo(() => {
+    return Object.values(uniqueOrgSubsInPeriod).map(s => ({
+      sub: s,
+      org: orgs[s.organization_id],
+    }));
+  }, [uniqueOrgSubsInPeriod, orgs]);
+  const newSubsCount = subscribedOrgsInPeriod.length;
 
   // Expired subs in period — subs whose ends_at falls in this period
-  const expiredInPeriod = useMemo(() => {
+  const expiredOrgsInPeriod = useMemo(() => {
     const seen = new Set<string>();
-    return subscriptions.filter(s => {
+    const results: { sub: Subscription; org: OrgInfo | undefined }[] = [];
+    for (const s of subscriptions) {
       const endDate = new Date(s.ends_at);
       if (endDate >= dateRange.start && endDate <= dateRange.end && endDate <= now && !seen.has(s.organization_id)) {
         seen.add(s.organization_id);
-        return true;
+        results.push({ sub: s, org: orgs[s.organization_id] });
       }
-      return false;
-    }).length;
-  }, [subscriptions, dateRange, now]);
+    }
+    return results;
+  }, [subscriptions, dateRange, now, orgs]);
+  const expiredInPeriod = expiredOrgsInPeriod.length;
 
   // Chart data based on period type
   const chartData = useMemo(() => {
