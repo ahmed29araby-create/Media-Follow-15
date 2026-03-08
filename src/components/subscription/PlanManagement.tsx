@@ -24,6 +24,7 @@ interface PlanPriceOverride {
 export default function PlanManagement() {
   const [expanded, setExpanded] = useState(false);
   const [prices, setPrices] = useState<PlanPriceOverride>({});
+  const [hiddenPlans, setHiddenPlans] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState("");
