@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accountStatus, setAccountStatus] = useState<string | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [isOrgActive, setIsOrgActive] = useState(true);
   const sessionInitializedRef = useRef(false);
 
   const fetchUserData = async (userId: string) => {
