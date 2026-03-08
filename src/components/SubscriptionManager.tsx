@@ -130,7 +130,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
         .update({
           ends_at: newEnd.toISOString(),
           months: subscription.months + months,
-          notes: `${subscription.notes || ""}\n+ تمديد ${months} شهر مجاني من صاحب الموقع`,
+          notes: `${subscription.notes || ""}\n+ تجديد ${months} شهر مجاني من صاحب الموقع`,
         })
         .eq("id", subscription.id);
       error = updateErr;
@@ -159,7 +159,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
       toast.error(error.message);
     } else {
       toast.success(subscription && new Date(subscription.ends_at) > new Date()
-        ? `تم تمديد الاشتراك بـ ${months} شهر إضافي`
+        ? `تم تجديد الاشتراك بـ ${months} شهر إضافي`
         : `تم تفعيل الاشتراك المجاني لمدة ${months} شهر`);
       setGrantOpen(false);
       setGrantPassword("");
@@ -345,7 +345,7 @@ export default function SubscriptionManager({ organizationId, organizationName }
       <div className="space-y-2">
         <Button variant="outline" className="w-full gap-2" onClick={() => setGrantOpen(true)}>
           <Gift className="h-4 w-4" />
-          {isActive ? "تمديد الاشتراك (مجاني)" : "دفع اشتراك الشركة (مجاني)"}
+          {isActive ? "تجديد الاشتراك (مجاني)" : "دفع اشتراك الشركة (مجاني)"}
         </Button>
         {isActive && (
           <Button variant="destructive" className="w-full gap-2" onClick={() => setCancelOpen(true)}>
