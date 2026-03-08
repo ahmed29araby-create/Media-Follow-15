@@ -77,11 +77,13 @@ export default function AuthPage() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail);
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("تم إرسال رمز التحقق إلى بريدك الإلكتروني");
+      toast.success("تم إرسال رسالة استعادة كلمة المرور إلى بريدك الإلكتروني. يمكنك الضغط على الرابط في الرسالة أو إدخال رمز التحقق هنا.");
       setStep("forgot-otp");
     }
     setLoading(false);
@@ -254,8 +256,11 @@ export default function AuthPage() {
             {step === "forgot-otp" && (
               <>
                 <h2 className="text-lg font-semibold text-foreground mb-1">أدخل رمز التحقق</h2>
-                <p className="text-sm text-muted-foreground mb-6">
-                  تم إرسال رمز مكون من 6 أرقام إلى <span className="text-foreground font-medium" dir="ltr">{normalizedEmail}</span>
+                <p className="text-sm text-muted-foreground mb-2">
+                  تم إرسال رسالة إلى <span className="text-foreground font-medium" dir="ltr">{normalizedEmail}</span>
+                </p>
+                <p className="text-xs text-muted-foreground mb-6">
+                  افتح الرسالة وأدخل رمز التحقق المكون من 6 أرقام، أو اضغط على الرابط في الرسالة مباشرة.
                 </p>
                 <div className="space-y-5">
                   <div className="flex justify-center" dir="ltr">
