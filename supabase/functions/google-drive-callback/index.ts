@@ -40,9 +40,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Exchange code for tokens
-    const clientId = Deno.env.get("GOOGLE_CLIENT_ID")!;
-    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
+    // Extract client credentials (handle JSON credentials format)
+    let clientId = Deno.env.get("GOOGLE_CLIENT_ID")!.trim();
+    let clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!.trim();
+    if (clientId.startsWith("{")) {
+      try { const p = JSON.parse(clientId); clientId = p?.web?.client_id || p?.installed?.client_id || clientId; } catch {}
+    }
+    if (clientSecret.startsWith("{")) {
+      try { const p = JSON.parse(clientSecret); clientSecret = p?.web?.client_secret || p?.installed?.client_secret || clientSecret; } catch {}
+    }
     const redirectUri = `${supabaseUrl}/functions/v1/google-drive-callback`;
 
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
