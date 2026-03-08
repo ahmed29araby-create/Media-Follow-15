@@ -95,26 +95,6 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground">إعدادات الشركة والتكامل</p>
       </div>
 
-      {/* Company Info */}
-      <div className="glass-panel p-6 space-y-4">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><Building2 className="h-4 w-4 text-primary" /></div>
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">بيانات الشركة</h2>
-            <p className="text-xs text-muted-foreground">تعديل اسم الشركة والبريد الإلكتروني</p>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2"><Pencil className="h-3.5 w-3.5 text-muted-foreground" />اسم الشركة</Label>
-          <Input value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="اسم الشركة" />
-        </div>
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-muted-foreground" />البريد الإلكتروني</Label>
-          <Input value={orgEmail} onChange={e => setOrgEmail(e.target.value)} placeholder="company@example.com" type="email" dir="ltr" className="text-left" />
-        </div>
-        <Button onClick={saveOrgInfo} disabled={savingOrg}>{savingOrg && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}حفظ التغييرات</Button>
-      </div>
-
       {/* Google Drive Settings */}
       <div className="glass-panel p-6 space-y-4">
         <div className="flex items-center gap-3 mb-2">
