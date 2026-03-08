@@ -287,62 +287,89 @@ export default function SubscriptionPage() {
         <Card className="border-border/50" id="payment-form">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center justify-between">
-              <span>الدفع عبر فودافون كاش</span>
-              <Badge variant="outline" className="text-primary border-primary/30">
-                {selectedPlan.name} — {selectedPlan.price.toLocaleString()} جنيه
-              </Badge>
+              <span>{isFullyCoveredByCredit ? "الدفع بالرصيد" : "الدفع عبر فودافون كاش"}</span>
+              <div className="flex items-center gap-2">
+                {creditApplied && (
+                  <Badge className="bg-success/15 text-success border-success/30 text-xs">
+                    خصم {creditAmount.toLocaleString()} ج
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-primary border-primary/30">
+                  {selectedPlan.name} — {creditApplied ? `${finalPrice.toLocaleString()} جنيه` : `${selectedPlan.price.toLocaleString()} جنيه`}
+                </Badge>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-secondary/50 rounded-lg p-4 space-y-2">
-              <p className="text-sm font-medium text-foreground">خطوات الدفع:</p>
-              <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>
-                  حوّل مبلغ <strong className="text-foreground">{selectedPlan.price.toLocaleString()} جنيه</strong> إلى رقم فودافون كاش:
-                </li>
-                <li className="flex items-center gap-2 mr-4">
-                  <Phone className="h-4 w-4 text-primary" />
-                  <span className="font-mono font-bold text-foreground text-lg" dir="ltr">{vodafoneNumber}</span>
-                </li>
-                <li>بعد التحويل، أدخل رقم الهاتف المُحوَّل منه وارفع صورة الإيصال</li>
-              </ol>
-            </div>
+            {/* Use Credits Section */}
+            <UseCreditsSection
+              planPrice={selectedPlan.price}
+              onCreditApplied={(amount, ids) => {
+                setCreditApplied(true);
+                setCreditAmount(amount);
+                setCreditIds(ids);
+              }}
+              onCreditRemoved={() => {
+                setCreditApplied(false);
+                setCreditAmount(0);
+                setCreditIds([]);
+              }}
+              applied={creditApplied}
+            />
 
-            <div className="space-y-2">
-              <Label>رقم الهاتف المُحوَّل منه</Label>
-              <Input
-                value={senderPhone}
-                onChange={(e) => setSenderPhone(e.target.value)}
-                placeholder="01xxxxxxxxx"
-                dir="ltr"
-                className="text-left"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>صورة إيصال التحويل</Label>
-              <label className="block cursor-pointer">
-                <div className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border/50 p-4 hover:border-primary/30 transition-colors">
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    {screenshotFile ? screenshotFile.name : "اختر صورة"}
-                  </span>
+            {!isFullyCoveredByCredit && (
+              <>
+                <div className="bg-secondary/50 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-foreground">خطوات الدفع:</p>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>
+                      حوّل مبلغ <strong className="text-foreground">{finalPrice.toLocaleString()} جنيه</strong> إلى رقم فودافون كاش:
+                    </li>
+                    <li className="flex items-center gap-2 mr-4">
+                      <Phone className="h-4 w-4 text-primary" />
+                      <span className="font-mono font-bold text-foreground text-lg" dir="ltr">{vodafoneNumber}</span>
+                    </li>
+                    <li>بعد التحويل، أدخل رقم الهاتف المُحوَّل منه وارفع صورة الإيصال</li>
+                  </ol>
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
-                />
-              </label>
-            </div>
+
+                <div className="space-y-2">
+                  <Label>رقم الهاتف المُحوَّل منه</Label>
+                  <Input
+                    value={senderPhone}
+                    onChange={(e) => setSenderPhone(e.target.value)}
+                    placeholder="01xxxxxxxxx"
+                    dir="ltr"
+                    className="text-left"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>صورة إيصال التحويل</Label>
+                  <label className="block cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border/50 p-4 hover:border-primary/30 transition-colors">
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {screenshotFile ? screenshotFile.name : "اختر صورة"}
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                </div>
+              </>
+            )}
 
             <div className="flex gap-3">
               <Button onClick={handleSubmitPayment} disabled={submitting} className="flex-1 gap-2">
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                إرسال طلب الاشتراك
+                {isFullyCoveredByCredit ? "تفعيل الباقة بالرصيد" : "إرسال طلب الاشتراك"}
               </Button>
-              <Button variant="outline" onClick={() => { setShowPaymentForm(false); setSelectedPlan(null); }}>
+              <Button variant="outline" onClick={() => { setShowPaymentForm(false); setSelectedPlan(null); setCreditApplied(false); setCreditAmount(0); }}>
                 إلغاء
               </Button>
             </div>
