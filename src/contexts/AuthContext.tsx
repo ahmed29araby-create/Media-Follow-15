@@ -170,12 +170,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!organizationId) return;
     const { data: orgData } = await supabase
       .from("organizations")
-      .select("name, is_active")
+      .select("name, is_active, disable_reason")
       .eq("id", organizationId)
       .single();
     if (orgData) {
       setOrganizationName(orgData.name);
       setIsOrgActive(orgData.is_active);
+      setDisableReason((orgData as any)?.disable_reason ?? null);
     }
   };
 
