@@ -15,6 +15,7 @@ interface AuthContextType {
   accountStatus: string | null;
   organizationId: string | null;
   organizationName: string | null;
+  isOrgActive: boolean;
   signOut: () => Promise<void>;
 }
 
