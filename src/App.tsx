@@ -11,14 +11,15 @@ import DashboardRouter from "@/pages/DashboardRouter";
 import UploadPage from "@/pages/UploadPage";
 import FilesPage from "@/pages/FilesPage";
 import ModerationPage from "@/pages/ModerationPage";
-import UsersPage from "@/pages/UsersPage";
+import AdminTeamPage from "@/pages/AdminTeamPage";
 import SettingsPage from "@/pages/SettingsPage";
+import NotificationsPage from "@/pages/NotificationsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
-  const { user, loading, isAdmin, accountStatus } = useAuth();
+  const { user, loading, isSuperAdmin, isAdmin, isMember, accountStatus, role } = useAuth();
 
   if (loading) {
     return (
@@ -35,11 +36,17 @@ function ProtectedRoutes() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<DashboardRouter />} />
-        <Route path="/upload" element={<UploadPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+
+        {/* Member routes */}
+        {(isMember || isAdmin) && <Route path="/upload" element={<UploadPage />} />}
         <Route path="/files" element={<FilesPage />} />
+
+        {/* Admin routes */}
+        {isAdmin && <Route path="/team" element={<AdminTeamPage />} />}
         {isAdmin && <Route path="/moderation" element={<ModerationPage />} />}
-        {isAdmin && <Route path="/users" element={<UsersPage />} />}
-        {isAdmin && <Route path="/settings" element={<SettingsPage />} />}
+        {(isAdmin || isSuperAdmin) && <Route path="/settings" element={<SettingsPage />} />}
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

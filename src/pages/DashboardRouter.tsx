@@ -1,8 +1,11 @@
 import { useAuth } from "@/contexts/AuthContext";
+import SuperAdminDashboard from "./SuperAdminDashboard";
 import AdminDashboard from "./AdminDashboard";
 import MemberDashboard from "./MemberDashboard";
 
 export default function DashboardRouter() {
-  const { isAdmin } = useAuth();
-  return isAdmin ? <AdminDashboard /> : <MemberDashboard />;
+  const { isSuperAdmin, isAdmin } = useAuth();
+  if (isSuperAdmin) return <SuperAdminDashboard />;
+  if (isAdmin) return <AdminDashboard />;
+  return <MemberDashboard />;
 }

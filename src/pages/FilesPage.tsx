@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Film, FileEdit, Trash2, FolderOpen } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Database } from "@/integrations/supabase/types";
@@ -36,68 +30,50 @@ export default function FilesPage() {
 
   const submitRequest = async (type: "edit" | "delete", fileId: string) => {
     const { error } = await supabase.from("change_requests").insert({
-      file_id: fileId,
-      user_id: user!.id,
-      request_type: type,
-      new_file_name: type === "edit" ? newName : null,
-      reason,
+      file_id: fileId, user_id: user!.id, request_type: type,
+      new_file_name: type === "edit" ? newName : null, reason,
     });
     if (error) toast.error(error.message);
-    else toast.success(`${type === "edit" ? "Edit" : "Delete"} request submitted`);
+    else toast.success(`تم إرسال طلب ${type === "edit" ? "التعديل" : "الحذف"}`);
     setEditDialog({ open: false, file: null });
     setDeleteDialog({ open: false, file: null });
-    setNewName("");
-    setReason("");
+    setNewName(""); setReason("");
   };
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case "approved": return <span className="status-approved">Approved</span>;
-      case "rejected": return <span className="status-rejected">Rejected</span>;
-      case "delete_requested": return <span className="status-pending">Delete Req.</span>;
-      default: return <span className="status-pending">Pending</span>;
+      case "approved": return <span className="status-approved">معتمد</span>;
+      case "rejected": return <span className="status-rejected">مرفوض</span>;
+      case "delete_requested": return <span className="status-pending">طلب حذف</span>;
+      default: return <span className="status-pending">قيد المراجعة</span>;
     }
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{isAdmin ? "All Files" : "My Files"}</h1>
-        <p className="text-sm text-muted-foreground">
-          {isAdmin ? "Manage all uploaded content" : "View and manage your uploads"}
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">{isAdmin ? "جميع الملفات" : "ملفاتي"}</h1>
+        <p className="text-sm text-muted-foreground">{isAdmin ? "إدارة جميع المحتوى المرفوع" : "عرض وإدارة ملفاتك"}</p>
       </div>
 
       <div className="space-y-3">
-        {files.map((file) => (
+        {files.map(file => (
           <div key={file.id} className="glass-panel p-4 flex items-center justify-between animate-slide-in">
             <div className="flex items-center gap-3">
               <Film className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-medium text-foreground">{file.file_name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {(file.file_size / 1024 / 1024).toFixed(1)} MB • {file.quality}
-                </p>
+                <p className="text-xs text-muted-foreground">{(file.file_size / 1024 / 1024).toFixed(1)} MB • {file.quality === "original" ? "أصلي" : "بروكسي"}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               {statusBadge(file.status)}
               {!isAdmin && file.status !== "pending" && (
                 <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-warning"
-                    onClick={() => { setEditDialog({ open: true, file }); setNewName(file.file_name); }}
-                  >
+                  <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-warning" onClick={() => { setEditDialog({ open: true, file }); setNewName(file.file_name); }}>
                     <FileEdit className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={() => setDeleteDialog({ open: true, file })}
-                  >
+                  <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={() => setDeleteDialog({ open: true, file })}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -108,50 +84,33 @@ export default function FilesPage() {
         {files.length === 0 && (
           <div className="glass-panel p-8 text-center">
             <FolderOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No files yet</p>
+            <p className="text-sm text-muted-foreground">لا توجد ملفات بعد</p>
           </div>
         )}
       </div>
 
-      {/* Edit Request Dialog */}
-      <Dialog open={editDialog.open} onOpenChange={(o) => setEditDialog({ open: o, file: editDialog.file })}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Request Rename</DialogTitle>
-          </DialogHeader>
+      <Dialog open={editDialog.open} onOpenChange={o => setEditDialog({ open: o, file: editDialog.file })}>
+        <DialogContent className="bg-card border-border" dir="rtl">
+          <DialogHeader><DialogTitle className="text-foreground">طلب إعادة تسمية</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>New File Name</Label>
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Reason</Label>
-              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why do you need this change?" />
-            </div>
+            <div className="space-y-2"><Label>الاسم الجديد</Label><Input value={newName} onChange={e => setNewName(e.target.value)} /></div>
+            <div className="space-y-2"><Label>السبب</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="لماذا تحتاج هذا التغيير؟" /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialog({ open: false, file: null })}>Cancel</Button>
-            <Button onClick={() => editDialog.file && submitRequest("edit", editDialog.file.id)}>Submit Request</Button>
+            <Button variant="outline" onClick={() => setEditDialog({ open: false, file: null })}>إلغاء</Button>
+            <Button onClick={() => editDialog.file && submitRequest("edit", editDialog.file.id)}>إرسال الطلب</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Request Dialog */}
-      <Dialog open={deleteDialog.open} onOpenChange={(o) => setDeleteDialog({ open: o, file: deleteDialog.file })}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Request Delete</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Request deletion of <strong className="text-foreground">{deleteDialog.file?.file_name}</strong>?
-          </p>
-          <div className="space-y-2">
-            <Label>Reason</Label>
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why should this be deleted?" />
-          </div>
+      <Dialog open={deleteDialog.open} onOpenChange={o => setDeleteDialog({ open: o, file: deleteDialog.file })}>
+        <DialogContent className="bg-card border-border" dir="rtl">
+          <DialogHeader><DialogTitle className="text-foreground">طلب حذف</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">طلب حذف <strong className="text-foreground">{deleteDialog.file?.file_name}</strong>؟</p>
+          <div className="space-y-2"><Label>السبب</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="لماذا يجب حذف هذا الملف؟" /></div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog({ open: false, file: null })}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteDialog.file && submitRequest("delete", deleteDialog.file.id)}>Submit Request</Button>
+            <Button variant="outline" onClick={() => setDeleteDialog({ open: false, file: null })}>إلغاء</Button>
+            <Button variant="destructive" onClick={() => deleteDialog.file && submitRequest("delete", deleteDialog.file.id)}>إرسال الطلب</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

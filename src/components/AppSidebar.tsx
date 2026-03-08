@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import {
-  Film,
+  Zap,
   LayoutDashboard,
   Upload,
   FolderOpen,
@@ -9,40 +9,62 @@ import {
   Users,
   Settings,
   LogOut,
+  Building2,
   Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+const superAdminLinks = [
+  { to: "/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
+  { to: "/settings", label: "الإعدادات", icon: Settings },
+];
 
 const adminLinks = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/moderation", label: "Moderation", icon: Shield },
-  { to: "/users", label: "Users", icon: Users },
-  { to: "/files", label: "All Files", icon: FolderOpen },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
+  { to: "/team", label: "إدارة الفريق", icon: Users },
+  { to: "/moderation", label: "المراجعة", icon: Shield },
+  { to: "/files", label: "جميع الملفات", icon: FolderOpen },
+  { to: "/settings", label: "الإعدادات", icon: Settings },
 ];
 
 const memberLinks = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/upload", label: "Upload", icon: Upload },
-  { to: "/files", label: "My Files", icon: FolderOpen },
+  { to: "/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
+  { to: "/upload", label: "رفع ملفات", icon: Upload },
+  { to: "/files", label: "ملفاتي", icon: FolderOpen },
 ];
 
 export default function AppSidebar() {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, role, isSuperAdmin, isAdmin, signOut, organizationName } = useAuth();
   const location = useLocation();
-  const links = isAdmin ? adminLinks : memberLinks;
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const links = isSuperAdmin ? superAdminLinks : isAdmin ? adminLinks : memberLinks;
+
+  const roleLabel = isSuperAdmin ? "مالك المنصة" : isAdmin ? "مسؤول الشركة" : "عضو فريق";
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false)
+      .then(({ count }) => setUnreadCount(count ?? 0));
+  }, [user]);
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-screen w-64 flex-col border-l border-border bg-sidebar" dir="rtl">
       <div className="flex items-center gap-3 p-5 border-b border-border">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 glow-border">
-          <Film className="h-4.5 w-4.5 text-primary" />
+          <Zap className="h-4.5 w-4.5 text-primary" />
         </div>
         <div>
-          <h1 className="text-sm font-bold text-foreground">MediaSync Pro</h1>
+          <h1 className="text-sm font-bold text-foreground">Media Follow</h1>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-            {isAdmin ? "Admin" : "Team Member"}
+            {organizationName || roleLabel}
           </p>
         </div>
       </div>
@@ -67,16 +89,37 @@ export default function AppSidebar() {
             </Link>
           );
         })}
+
+        {/* Notifications */}
+        <Link
+          to="/notifications"
+          className={cn(
+            "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+            location.pathname === "/notifications"
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+          )}
+        >
+          <Bell className="h-4 w-4" />
+          الإشعارات
+          {unreadCount > 0 && (
+            <span className="mr-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+              {unreadCount}
+            </span>
+          )}
+        </Link>
       </nav>
 
       <div className="border-t border-border p-3">
         <div className="flex items-center gap-3 px-3 py-2 mb-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground">
-            {user?.email?.charAt(0).toUpperCase()}
+            {user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
-            <p className="text-[10px] text-muted-foreground">{isAdmin ? "Admin" : "Member"}</p>
+            <p className="text-xs font-medium text-foreground truncate">
+              {user?.user_metadata?.display_name || user?.email}
+            </p>
+            <p className="text-[10px] text-muted-foreground">{roleLabel}</p>
           </div>
         </div>
         <Button
@@ -85,8 +128,8 @@ export default function AppSidebar() {
           onClick={signOut}
           className="w-full justify-start text-muted-foreground hover:text-destructive"
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
+          <LogOut className="ml-2 h-4 w-4" />
+          تسجيل الخروج
         </Button>
       </div>
     </aside>

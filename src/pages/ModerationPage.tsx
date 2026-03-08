@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Check, X, Film, Clock, FileEdit, Trash2, Loader2 } from "lucide-react";
@@ -14,8 +15,10 @@ interface ChangeRequestWithFile extends ChangeRequestRow {
 }
 
 export default function ModerationPage() {
+  const { organizationId } = useAuth();
   const [pendingFiles, setPendingFiles] = useState<FileRow[]>([]);
   const [changeRequests, setChangeRequests] = useState<ChangeRequestWithFile[]>([]);
+  const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     const [filesRes, requestsRes] = await Promise.all([
@@ -28,33 +31,45 @@ export default function ModerationPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set());
-
-  const handleFileAction = async (fileId: string, action: "approved" | "rejected") => {
+  const handleFileAction = async (fileId: string, action: "approved" | "rejected", file: FileRow) => {
     if (action === "approved") {
-      setSyncingFiles((prev) => new Set(prev).add(fileId));
+      setSyncingFiles(prev => new Set(prev).add(fileId));
       try {
-        const { data, error } = await supabase.functions.invoke("sync-to-drive", {
-          body: { file_id: fileId },
-        });
+        const { data, error } = await supabase.functions.invoke("sync-to-drive", { body: { file_id: fileId } });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        toast.success("File approved & synced to Google Drive");
-      } catch (err: any) {
-        toast.error(`Sync failed: ${err.message}`);
-      } finally {
-        setSyncingFiles((prev) => {
-          const next = new Set(prev);
-          next.delete(fileId);
-          return next;
+
+        // Notify the member
+        await supabase.from("notifications").insert({
+          user_id: file.user_id,
+          organization_id: organizationId,
+          title: "تمت الموافقة على فيديو ✅",
+          message: `تمت الموافقة على "${file.file_name}"`,
+          type: "approval",
+          related_file_id: fileId,
         });
+
+        toast.success("تمت الموافقة ومزامنة الملف");
+      } catch (err: any) {
+        toast.error(`فشل المزامنة: ${err.message}`);
+      } finally {
+        setSyncingFiles(prev => { const n = new Set(prev); n.delete(fileId); return n; });
         fetchData();
       }
     } else {
       const { error } = await supabase.from("files").update({ status: action }).eq("id", fileId);
       if (error) toast.error(error.message);
       else {
-        toast.success(`File rejected`);
+        // Notify the member
+        await supabase.from("notifications").insert({
+          user_id: file.user_id,
+          organization_id: organizationId,
+          title: "تم رفض فيديو ❌",
+          message: `تم رفض "${file.file_name}"`,
+          type: "rejection",
+          related_file_id: fileId,
+        });
+        toast.success("تم الرفض");
         fetchData();
       }
     }
@@ -63,7 +78,6 @@ export default function ModerationPage() {
   const handleRequestAction = async (requestId: string, action: "approved" | "rejected", request: ChangeRequestWithFile) => {
     const { error } = await supabase.from("change_requests").update({ status: action }).eq("id", requestId);
     if (error) { toast.error(error.message); return; }
-
     if (action === "approved") {
       if (request.request_type === "delete") {
         await supabase.from("files").update({ status: "rejected" }).eq("id", request.file_id);
@@ -71,24 +85,24 @@ export default function ModerationPage() {
         await supabase.from("files").update({ file_name: request.new_file_name }).eq("id", request.file_id);
       }
     }
-    toast.success(`Request ${action}`);
+    toast.success(`تم ${action === "approved" ? "الموافقة على" : "رفض"} الطلب`);
     fetchData();
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Moderation Panel</h1>
-        <p className="text-sm text-muted-foreground">Review and approve pending actions</p>
+        <h1 className="text-2xl font-bold text-foreground">لوحة المراجعة</h1>
+        <p className="text-sm text-muted-foreground">مراجعة والموافقة على الإجراءات المعلقة</p>
       </div>
 
-      <Tabs defaultValue="uploads">
+      <Tabs defaultValue="uploads" dir="rtl">
         <TabsList className="bg-secondary">
           <TabsTrigger value="uploads" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-            Uploads ({pendingFiles.length})
+            الرفع ({pendingFiles.length})
           </TabsTrigger>
           <TabsTrigger value="requests" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-            Requests ({changeRequests.length})
+            الطلبات ({changeRequests.length})
           </TabsTrigger>
         </TabsList>
 
@@ -96,25 +110,23 @@ export default function ModerationPage() {
           {pendingFiles.length === 0 ? (
             <div className="glass-panel p-8 text-center">
               <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No pending uploads</p>
+              <p className="text-sm text-muted-foreground">لا توجد ملفات معلقة</p>
             </div>
           ) : (
-            pendingFiles.map((file) => (
+            pendingFiles.map(file => (
               <div key={file.id} className="glass-panel p-4 flex items-center justify-between animate-slide-in">
                 <div className="flex items-center gap-3">
                   <Film className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-medium text-foreground">{file.file_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(file.file_size / 1024 / 1024).toFixed(1)} MB • {file.quality} quality
-                    </p>
+                    <p className="text-xs text-muted-foreground">{(file.file_size / 1024 / 1024).toFixed(1)} MB • {file.quality === "original" ? "أصلي" : "بروكسي"}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleFileAction(file.id, "approved")} disabled={syncingFiles.has(file.id)}>
+                  <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleFileAction(file.id, "approved", file)} disabled={syncingFiles.has(file.id)}>
                     {syncingFiles.has(file.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleFileAction(file.id, "rejected")}>
+                  <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleFileAction(file.id, "rejected", file)}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -127,36 +139,24 @@ export default function ModerationPage() {
           {changeRequests.length === 0 ? (
             <div className="glass-panel p-8 text-center">
               <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No pending requests</p>
+              <p className="text-sm text-muted-foreground">لا توجد طلبات معلقة</p>
             </div>
           ) : (
-            changeRequests.map((req) => (
+            changeRequests.map(req => (
               <div key={req.id} className="glass-panel p-4 flex items-center justify-between animate-slide-in">
                 <div className="flex items-center gap-3">
-                  {req.request_type === "delete" ? (
-                    <Trash2 className="h-5 w-5 text-destructive" />
-                  ) : (
-                    <FileEdit className="h-5 w-5 text-warning" />
-                  )}
+                  {req.request_type === "delete" ? <Trash2 className="h-5 w-5 text-destructive" /> : <FileEdit className="h-5 w-5 text-warning" />}
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      {req.request_type === "delete" ? "Delete" : "Rename"}: {req.files?.file_name}
+                      {req.request_type === "delete" ? "حذف" : "إعادة تسمية"}: {req.files?.file_name}
                     </p>
-                    {req.new_file_name && (
-                      <p className="text-xs text-muted-foreground">New name: {req.new_file_name}</p>
-                    )}
-                    {req.reason && (
-                      <p className="text-xs text-muted-foreground">Reason: {req.reason}</p>
-                    )}
+                    {req.new_file_name && <p className="text-xs text-muted-foreground">الاسم الجديد: {req.new_file_name}</p>}
+                    {req.reason && <p className="text-xs text-muted-foreground">السبب: {req.reason}</p>}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleRequestAction(req.id, "approved", req)}>
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleRequestAction(req.id, "rejected", req)}>
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleRequestAction(req.id, "approved", req)}><Check className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleRequestAction(req.id, "rejected", req)}><X className="h-4 w-4" /></Button>
                 </div>
               </div>
             ))
