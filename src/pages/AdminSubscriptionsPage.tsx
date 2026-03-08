@@ -149,25 +149,19 @@ export default function AdminSubscriptionsPage() {
 
     await supabase.from("organizations").update({ is_active: true }).eq("id", payment.organization_id);
 
-    // === REFERRAL CREDIT LOGIC ===
+    // === REFERRAL CODE CREDIT LOGIC ===
     try {
-      // Check if this org was referred by someone
-      const { data: referral } = await supabase
-        .from("referrals")
-        .select("id, referrer_org_id")
-        .eq("referred_org_id", payment.organization_id)
-        .maybeSingle();
-
-      if (referral) {
-        // Check if credit was already given for this referral
-        const { data: existingCredit } = await supabase
-          .from("referral_credits")
-          .select("id")
-          .eq("referral_id", referral.id)
+      const codeUsed = (payment as any).referral_code_used;
+      if (codeUsed) {
+        // Find the code owner
+        const { data: codeData } = await supabase
+          .from("referral_codes")
+          .select("organization_id")
+          .eq("code", codeUsed)
           .maybeSingle();
 
-        if (!existingCredit) {
-          // Get referral percentage
+        if (codeData) {
+          // Get referral percentage for code owner
           const { data: pctSetting } = await supabase
             .from("admin_settings")
             .select("setting_value")
@@ -176,7 +170,6 @@ export default function AdminSubscriptionsPage() {
             .maybeSingle();
           const percentage = Number(pctSetting?.setting_value ?? 50);
 
-          // Get credit expiry months
           const { data: expSetting } = await supabase
             .from("admin_settings")
             .select("setting_value")
@@ -185,11 +178,27 @@ export default function AdminSubscriptionsPage() {
             .maybeSingle();
           const expiryMonths = Number(expSetting?.setting_value ?? 6);
 
-          const creditAmount = Math.round(payment.amount * percentage / 100);
+          // Get the original plan price (before user discount)
+          const { data: userPctSetting } = await supabase
+            .from("admin_settings")
+            .select("setting_value")
+            .eq("setting_key", "user_discount_percentage")
+            .is("organization_id", null)
+            .maybeSingle();
+          const userDiscountPct = Number(userPctSetting?.setting_value ?? 25);
+          // Reconstruct original price: amount = original * (1 - userDiscountPct/100)
+          const originalPrice = Math.round(payment.amount / (1 - userDiscountPct / 100));
+
+          const creditAmount = Math.round(originalPrice * percentage / 100);
           const expiresAt = new Date();
           expiresAt.setMonth(expiresAt.getMonth() + expiryMonths);
 
-          // Get referrer org name for description
+          // Create referral record
+          const { data: referral } = await supabase.from("referrals").insert({
+            referrer_org_id: codeData.organization_id,
+            referred_org_id: payment.organization_id,
+          }).select("id").maybeSingle();
+
           const { data: referredOrg } = await supabase
             .from("organizations")
             .select("name")
@@ -197,27 +206,27 @@ export default function AdminSubscriptionsPage() {
             .maybeSingle();
 
           await supabase.from("referral_credits").insert({
-            organization_id: referral.referrer_org_id,
+            organization_id: codeData.organization_id,
             amount: creditAmount,
             remaining: creditAmount,
-            referral_id: referral.id,
-            source_description: `إحالة ${referredOrg?.name || "شركة"} — اشتراك ${payment.amount} جنيه`,
+            referral_id: referral?.id || null,
+            source_description: `كود خصم — ${referredOrg?.name || "شركة"} اشتركت بـ ${originalPrice} جنيه`,
             expires_at: expiresAt.toISOString(),
           });
 
-          // Notify referrer
-          const { data: referrerProfiles } = await supabase
+          // Notify code owner
+          const { data: ownerProfiles } = await supabase
             .from("profiles")
             .select("user_id")
-            .eq("organization_id", referral.referrer_org_id);
+            .eq("organization_id", codeData.organization_id);
 
-          if (referrerProfiles) {
-            for (const p of referrerProfiles) {
+          if (ownerProfiles) {
+            for (const p of ownerProfiles) {
               await supabase.from("notifications").insert({
                 user_id: p.user_id,
-                organization_id: referral.referrer_org_id,
+                organization_id: codeData.organization_id,
                 title: "🎉 حصلت على رصيد إحالة!",
-                message: `تم إضافة ${creditAmount} جنيه رصيد لحسابك من إحالة ${referredOrg?.name || "شركة"}. صالح لمدة ${expiryMonths} شهور.`,
+                message: `تم إضافة ${creditAmount} جنيه رصيد لحسابك — شخص استخدم كود الخصم بتاعك. صالح لمدة ${expiryMonths} شهور.`,
                 type: "referral_credit",
               });
             }

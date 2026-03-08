@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     if (roleError) throw roleError;
 
     // Generate referral code for the new org
-    const code = generateCode(org_name);
+    const code = generateCode();
     await adminClient.from("referral_codes").insert({
       organization_id: org.id,
       code,
