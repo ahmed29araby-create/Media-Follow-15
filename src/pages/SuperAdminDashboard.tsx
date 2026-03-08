@@ -26,7 +26,7 @@ interface Organization {
 }
 
 export default function SuperAdminDashboard() {
-  const { user } = useAuth();
+  const { user, displayName, organizationName } = useAuth();
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "active" | "disabled">("all");
@@ -157,7 +157,7 @@ export default function SuperAdminDashboard() {
               <span className="text-xs font-semibold text-primary uppercase tracking-widest">مالك المنصة</span>
             </div>
             <h1 className="text-3xl font-bold text-foreground">
-              مرحباً، {user?.user_metadata?.display_name || "مدير المنصة"}
+              مرحباً، {displayName || organizationName || "مدير المنصة"}
             </h1>
             <p className="text-sm text-muted-foreground max-w-md">
               لوحة التحكم الرئيسية للمنصة — إدارة الشركات والمسؤولين وجميع العمليات

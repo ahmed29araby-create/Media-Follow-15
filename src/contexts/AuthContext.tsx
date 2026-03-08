@@ -16,8 +16,10 @@ interface AuthContextType {
   organizationId: string | null;
   organizationName: string | null;
   isOrgActive: boolean;
+  displayName: string | null;
   signOut: () => Promise<void>;
   refreshOrgData: () => Promise<void>;
+  refreshDisplayName: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -32,8 +34,10 @@ const AuthContext = createContext<AuthContextType>({
   organizationId: null,
   organizationName: null,
   isOrgActive: true,
+  displayName: null,
   signOut: async () => {},
   refreshOrgData: async () => {},
+  refreshDisplayName: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -47,13 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isOrgActive, setIsOrgActive] = useState(true);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const sessionInitializedRef = useRef(false);
 
   const fetchUserData = async (userId: string) => {
     try {
       const [rolesRes, profileRes] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", userId),
-        supabase.from("profiles").select("account_status, organization_id").eq("user_id", userId).single(),
+        supabase.from("profiles").select("account_status, organization_id, display_name").eq("user_id", userId).single(),
       ]);
 
       // Determine highest role
@@ -64,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       else setRole(null);
 
       setAccountStatus(profileRes.data?.account_status ?? null);
+      setDisplayName(profileRes.data?.display_name ?? null);
       const orgId = profileRes.data?.organization_id ?? null;
       setOrganizationId(orgId);
 
@@ -83,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setRole(null);
       setAccountStatus(null);
+      setDisplayName(null);
       setOrganizationId(null);
       setOrganizationName(null);
       setIsOrgActive(true);
@@ -102,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!nextUser) {
         setRole(null);
         setAccountStatus(null);
+        setDisplayName(null);
         setOrganizationId(null);
         setOrganizationName(null);
         setLoading(false);
@@ -134,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setRole(null);
         setAccountStatus(null);
+        setDisplayName(null);
         setOrganizationId(null);
         setOrganizationName(null);
         setLoading(false);
@@ -162,6 +171,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshDisplayName = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("user_id", user.id)
+      .single();
+    if (data) setDisplayName(data.display_name);
+  };
+
   const isSuperAdmin = role === "super_admin";
   const isAdmin = role === "admin" || role === "super_admin";
   const isMember = role === "member";
@@ -172,8 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user, session, loading, role,
         isSuperAdmin, isAdmin, isMember,
         accountStatus, organizationId, organizationName,
-        isOrgActive,
-        signOut, refreshOrgData,
+        isOrgActive, displayName,
+        signOut, refreshOrgData, refreshDisplayName,
       }}
     >
       {children}

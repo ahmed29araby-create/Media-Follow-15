@@ -50,7 +50,7 @@ interface AppSidebarProps {
 }
 
 export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
-  const { user, role, isSuperAdmin, isAdmin, signOut, organizationName } = useAuth();
+  const { user, role, isSuperAdmin, isAdmin, signOut, organizationName, displayName } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -214,9 +214,11 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white">
-                  {isAdmin
-                    ? (organizationName?.charAt(0)?.toUpperCase() || "O")
-                    : (user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase())}
+                  {isSuperAdmin
+                    ? (displayName?.charAt(0)?.toUpperCase() || organizationName?.charAt(0)?.toUpperCase() || "M")
+                    : isAdmin
+                      ? (organizationName?.charAt(0)?.toUpperCase() || "O")
+                      : (user?.user_metadata?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase())}
                 </div>
               </div>
               <div
@@ -224,14 +226,14 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
                 style={{ width: open ? "140px" : "0px", opacity: open ? 1 : 0 }}
               >
                 <p className="text-sm font-semibold text-white truncate text-left leading-tight">
-                  {isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
+                  {isSuperAdmin ? (displayName || organizationName || "مدير المنصة") : isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
                 </p>
               </div>
             </button>
           </TooltipTrigger>
           {!open && (
             <TooltipContent side="right" className="text-xs">
-              {isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
+              {isSuperAdmin ? (displayName || organizationName || "مدير المنصة") : isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
             </TooltipContent>
           )}
         </Tooltip>
