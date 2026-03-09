@@ -28,10 +28,14 @@ export default function ReferralCard() {
   const fetchReferralInfo = async () => {
     if (!organizationId) return;
 
-    const [codeRes, creditsRes, referralsRes] = await Promise.all([
+    const [codeRes, creditsRes, referralsRes, settingsRes] = await Promise.all([
       supabase.from("referral_codes").select("code").eq("organization_id", organizationId).maybeSingle(),
       supabase.from("referral_credits").select("amount, remaining, expires_at").eq("organization_id", organizationId),
       supabase.from("referrals").select("id").eq("referrer_org_id", organizationId),
+      supabase.from("admin_settings")
+        .select("setting_key, setting_value")
+        .in("setting_key", ["referral_percentage", "user_discount_percentage"])
+        .is("organization_id", null),
     ]);
 
     const now = new Date();
@@ -39,11 +43,17 @@ export default function ReferralCard() {
     const totalCredits = activeCredits.reduce((sum, c) => sum + Number(c.amount), 0);
     const availableCredits = activeCredits.reduce((sum, c) => sum + Number(c.remaining), 0);
 
+    // Extract percentages from settings
+    const ownerPercentage = Number(settingsRes.data?.find(s => s.setting_key === "referral_percentage")?.setting_value || "50");
+    const userPercentage = Number(settingsRes.data?.find(s => s.setting_key === "user_discount_percentage")?.setting_value || "25");
+
     setInfo({
       code: codeRes.data?.code ?? "",
       totalCredits,
       availableCredits,
       referralCount: referralsRes.data?.length ?? 0,
+      ownerPercentage,
+      userPercentage,
     });
     setLoading(false);
   };
