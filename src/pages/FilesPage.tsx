@@ -228,6 +228,44 @@ export default function FilesPage() {
     );
   }
 
+  const renderDialogs = () => (
+    <>
+      <Dialog open={editDialog.open} onOpenChange={o => setEditDialog({ open: o, file: editDialog.file })}>
+        <DialogContent className="bg-card border-border" dir="rtl">
+          <DialogHeader><DialogTitle className="text-foreground">طلب إعادة تسمية</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>الاسم الجديد</Label><Input value={newName} onChange={e => setNewName(e.target.value)} /></div>
+            <div className="space-y-2"><Label>السبب</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="لماذا تحتاج هذا التغيير؟" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog({ open: false, file: null })}>إلغاء</Button>
+            <Button onClick={() => editDialog.file && submitRequest("edit", editDialog.file.id)}>إرسال الطلب</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialog.open} onOpenChange={o => setDeleteDialog({ open: o, file: deleteDialog.file })}>
+        <DialogContent className="bg-card border-border" dir="rtl">
+          <DialogHeader><DialogTitle className="text-foreground">طلب حذف</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">طلب حذف <strong className="text-foreground">{deleteDialog.file?.file_name}</strong>؟</p>
+          <div className="space-y-2"><Label>السبب</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="لماذا يجب حذف هذا الملف؟" /></div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog({ open: false, file: null })}>إلغاء</Button>
+            <Button variant="destructive" onClick={() => deleteDialog.file && submitRequest("delete", deleteDialog.file.id)}>إرسال الطلب</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <FilePreviewDialog
+        open={!!previewFile}
+        onOpenChange={(o) => !o && setPreviewFile(null)}
+        storagePath={previewFile?.storage_path ?? null}
+        fileName={previewFile?.file_name ?? ""}
+        drivePath={previewFile?.drive_path}
+      />
+    </>
+  );
+
   // Subfolder selected - show files in that subfolder
   if (selectedSubfolder) {
     const currentGroup = groupedFiles.find(g => g.folderName === selectedSubfolder);
