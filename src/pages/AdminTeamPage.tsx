@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Users, User, Eye, EyeOff, Loader2, FolderOpen, DollarSign, Film, CheckCircle } from "lucide-react";
+import { Plus, Users, User, Eye, EyeOff, Loader2, FolderOpen, DollarSign, FileStack, CheckCircle } from "lucide-react";
 
 interface TeamMember {
   id: string;
@@ -30,6 +31,7 @@ interface TeamMember {
 
 export default function AdminTeamPage() {
   const { organizationId } = useAuth();
+  const navigate = useNavigate();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -44,7 +46,6 @@ export default function AdminTeamPage() {
   const fetchMembers = async () => {
     if (!organizationId) return;
     
-    // Get profiles in this org that have member role
     const { data: profiles } = await supabase
       .from("profiles")
       .select("*")
@@ -56,7 +57,6 @@ export default function AdminTeamPage() {
     const membersList: TeamMember[] = [];
 
     for (const profile of profiles) {
-      // Check if this user is a member (not admin)
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
@@ -65,7 +65,6 @@ export default function AdminTeamPage() {
       const isMember = roles?.some(r => r.role === "member");
       if (!isMember) continue;
 
-      // Get member settings
       const { data: settings } = await supabase
         .from("member_settings")
         .select("folder_name, price_per_video")
@@ -73,7 +72,6 @@ export default function AdminTeamPage() {
         .eq("organization_id", organizationId)
         .single();
 
-      // Get file stats
       const { data: files } = await supabase
         .from("files")
         .select("status")
@@ -139,16 +137,6 @@ export default function AdminTeamPage() {
     setCreating(false);
   };
 
-  const updatePricing = async (userId: string, newPrice: number) => {
-    const { error } = await supabase
-      .from("member_settings")
-      .update({ price_per_video: newPrice })
-      .eq("user_id", userId)
-      .eq("organization_id", organizationId!);
-    if (error) toast.error(error.message);
-    else { toast.success("تم تحديث السعر"); fetchMembers(); }
-  };
-
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6" dir="rtl">
       <div className="text-center space-y-3 pb-4 border-b border-border">
@@ -211,7 +199,6 @@ export default function AdminTeamPage() {
         </Dialog>
       </div>
 
-      {/* Members list */}
       <div className="space-y-3">
         {loading ? (
           <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -237,17 +224,20 @@ export default function AdminTeamPage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="rounded-lg bg-secondary/50 p-3 text-center">
+                <button
+                  onClick={() => navigate(`/files?member=${member.user_id}`)}
+                  className="rounded-lg bg-secondary/50 p-3 text-center hover:bg-secondary/80 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                     <FolderOpen className="h-3 w-3" />
                     <span className="text-[10px] uppercase tracking-wider">المجلد</span>
                   </div>
-                  <p className="text-xs font-medium text-foreground" dir="ltr">{member.member_settings?.folder_name ?? "-"}</p>
-                </div>
+                  <p className="text-xs font-medium text-primary underline" dir="ltr">{member.member_settings?.folder_name ?? "-"}</p>
+                </button>
                 <div className="rounded-lg bg-secondary/50 p-3 text-center">
                   <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                    <Film className="h-3 w-3" />
-                    <span className="text-[10px] uppercase tracking-wider">الفيديوهات</span>
+                    <FileStack className="h-3 w-3" />
+                    <span className="text-[10px] uppercase tracking-wider">المحتوى</span>
                   </div>
                   <p className="text-sm font-bold text-foreground">{member.file_stats?.total ?? 0}</p>
                 </div>
