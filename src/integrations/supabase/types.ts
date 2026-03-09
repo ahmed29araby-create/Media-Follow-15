@@ -283,6 +283,48 @@ export type Database = {
           },
         ]
       }
+      org_registration_requests: {
+        Row: {
+          admin_password: string
+          created_at: string
+          id: string
+          org_email: string
+          org_name: string
+          referral_code: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["org_request_status"]
+          updated_at: string
+          whatsapp_phone: string | null
+        }
+        Insert: {
+          admin_password: string
+          created_at?: string
+          id?: string
+          org_email: string
+          org_name: string
+          referral_code?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["org_request_status"]
+          updated_at?: string
+          whatsapp_phone?: string | null
+        }
+        Update: {
+          admin_password?: string
+          created_at?: string
+          id?: string
+          org_email?: string
+          org_name?: string
+          referral_code?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["org_request_status"]
+          updated_at?: string
+          whatsapp_phone?: string | null
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           created_at: string
@@ -603,6 +645,7 @@ export type Database = {
       account_status: "pending" | "approved" | "rejected"
       app_role: "admin" | "member" | "super_admin"
       file_status: "pending" | "approved" | "rejected" | "delete_requested"
+      org_request_status: "pending" | "approved" | "rejected"
       quality_type: "proxy" | "original"
       request_status: "pending" | "approved" | "rejected"
       request_type: "edit" | "delete"
@@ -736,6 +779,7 @@ export const Constants = {
       account_status: ["pending", "approved", "rejected"],
       app_role: ["admin", "member", "super_admin"],
       file_status: ["pending", "approved", "rejected", "delete_requested"],
+      org_request_status: ["pending", "approved", "rejected"],
       quality_type: ["proxy", "original"],
       request_status: ["pending", "approved", "rejected"],
       request_type: ["edit", "delete"],
