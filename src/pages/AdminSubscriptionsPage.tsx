@@ -245,17 +245,20 @@ export default function AdminSubscriptionsPage() {
       .from("profiles")
       .select("user_id")
       .eq("organization_id", payment.organization_id);
-
-    if (profiles) {
-      for (const p of profiles) {
-        await supabase.from("notifications").insert({
-          user_id: p.user_id,
-          organization_id: payment.organization_id,
-          title: "✅ تم تجديد الاشتراك",
-          message: `تم الموافقة على طلب الاشتراك وتفعيل الحساب لمدة ${payment.months} شهر.`,
-          type: "sub_approved",
-        });
-      }
+    const { data: subAdminRoles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin");
+    const subAdminIds = new Set(subAdminRoles?.map(r => r.user_id) ?? []);
+    const subAdmins = profiles?.filter(p => subAdminIds.has(p.user_id)) ?? [];
+    for (const p of subAdmins) {
+      await supabase.from("notifications").insert({
+        user_id: p.user_id,
+        organization_id: payment.organization_id,
+        title: "✅ تم تجديد الاشتراك",
+        message: `تم الموافقة على طلب الاشتراك وتفعيل الحساب لمدة ${payment.months} شهر.`,
+        type: "sub_approved",
+      });
     }
 
     if (subError) {
