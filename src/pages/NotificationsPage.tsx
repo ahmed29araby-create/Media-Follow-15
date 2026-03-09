@@ -82,17 +82,20 @@ export default function NotificationsPage() {
           .from("profiles")
           .select("user_id")
           .eq("organization_id", notification.organization_id);
-        
-        if (orgProfiles) {
-          for (const p of orgProfiles) {
-            await supabase.from("notifications").insert({
-              user_id: p.user_id,
-              title: "تم إعادة تفعيل الشركة",
-              message: "تمت الموافقة على طلبك وتم إعادة تفعيل شركتك بنجاح.",
-              type: "info",
-              organization_id: notification.organization_id,
-            });
-          }
+        const { data: appealAdminRoles } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "admin");
+        const appealAdminIds = new Set(appealAdminRoles?.map(r => r.user_id) ?? []);
+        const appealAdmins = orgProfiles?.filter(p => appealAdminIds.has(p.user_id)) ?? [];
+        for (const p of appealAdmins) {
+          await supabase.from("notifications").insert({
+            user_id: p.user_id,
+            title: "تم إعادة تفعيل الشركة",
+            message: "تمت الموافقة على طلبك وتم إعادة تفعيل شركتك بنجاح.",
+            type: "info",
+            organization_id: notification.organization_id,
+          });
         }
         toast.success("تم قبول الطلب وإعادة تفعيل الشركة");
       } else {
