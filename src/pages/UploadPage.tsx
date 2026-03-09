@@ -139,9 +139,10 @@ export default function UploadPage() {
         xhr.addEventListener("error", () => reject(new Error("فشل الاتصال بالخادم")));
         xhr.addEventListener("abort", () => reject(new Error("تم إلغاء الرفع")));
 
-        xhr.open("POST", uploadUrl);
+        xhr.open("PUT", uploadUrl);
         xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
         xhr.setRequestHeader("apikey", import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
         xhr.setRequestHeader("x-upsert", "true");
         xhr.send(file);
       });
