@@ -6,9 +6,32 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function extractGoogleOAuthValue(rawValue: string | undefined, field: "client_id" | "client_secret"): string | null {
+  const value = rawValue?.trim();
+  if (!value) return null;
+
+  if (value.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(value);
+      const extracted = parsed?.web?.[field] || parsed?.installed?.[field] || parsed?.[field];
+      if (typeof extracted === "string" && extracted.trim()) {
+        return extracted.trim();
+      }
+    } catch {
+      // fall back to raw value
+    }
+  }
+
+  return value;
+}
+
 async function getAccessTokenFromRefreshToken(refreshToken: string): Promise<string> {
-  const clientId = Deno.env.get("GOOGLE_CLIENT_ID")!;
-  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
+  const clientId = extractGoogleOAuthValue(Deno.env.get("GOOGLE_CLIENT_ID"), "client_id");
+  const clientSecret = extractGoogleOAuthValue(Deno.env.get("GOOGLE_CLIENT_SECRET"), "client_secret");
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Google OAuth client credentials are not configured correctly");
+  }
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -22,7 +45,7 @@ async function getAccessTokenFromRefreshToken(refreshToken: string): Promise<str
   });
 
   const data = await res.json();
-  if (!data.access_token) {
+  if (!res.ok || !data.access_token) {
     throw new Error(`Failed to refresh access token: ${JSON.stringify(data)}`);
   }
   return data.access_token;
