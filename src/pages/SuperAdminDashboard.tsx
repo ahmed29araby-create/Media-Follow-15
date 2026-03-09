@@ -89,7 +89,59 @@ export default function SuperAdminDashboard() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchOrgs(); }, []);
+  const fetchRequests = async () => {
+    const { data } = await supabase
+      .from("org_registration_requests")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+    setRequests(data ?? []);
+    setLoadingRequests(false);
+  };
+
+  useEffect(() => { fetchOrgs(); fetchRequests(); }, []);
+
+  const handleApproveRequest = async (request: OrgRequest) => {
+    setProcessingRequest(request.id);
+    const { data, error } = await supabase.functions.invoke("create-organization", {
+      body: {
+        org_name: request.org_name,
+        org_email: request.org_email,
+        admin_password: request.admin_password,
+        referral_code: request.referral_code || undefined,
+      },
+    });
+
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "فشل إنشاء الشركة");
+    } else {
+      // Update request status
+      await supabase
+        .from("org_registration_requests")
+        .update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: user?.id })
+        .eq("id", request.id);
+      toast.success("تم قبول وتفعيل الشركة بنجاح!");
+      fetchOrgs();
+      fetchRequests();
+    }
+    setProcessingRequest(null);
+  };
+
+  const handleRejectRequest = async (request: OrgRequest) => {
+    setProcessingRequest(request.id);
+    const { error } = await supabase
+      .from("org_registration_requests")
+      .update({ status: "rejected", reviewed_at: new Date().toISOString(), reviewed_by: user?.id })
+      .eq("id", request.id);
+
+    if (error) {
+      toast.error("فشل رفض الطلب");
+    } else {
+      toast.success("تم رفض الطلب");
+      fetchRequests();
+    }
+    setProcessingRequest(null);
+  };
 
   const handleCreate = async () => {
     if (form.admin_password.length < 12) {
