@@ -25,6 +25,17 @@ interface Organization {
   created_at: string;
 }
 
+interface OrgRequest {
+  id: string;
+  org_name: string;
+  org_email: string;
+  admin_password: string;
+  referral_code: string | null;
+  whatsapp_phone: string | null;
+  status: string;
+  created_at: string;
+}
+
 export default function SuperAdminDashboard() {
   const { user, displayName, organizationName } = useAuth();
   const [orgs, setOrgs] = useState<Organization[]>([]);
