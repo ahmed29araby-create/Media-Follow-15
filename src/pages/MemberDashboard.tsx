@@ -106,9 +106,23 @@ export default function MemberDashboard() {
               <p className="text-lg font-bold text-foreground" dir="ltr">{folderName}</p>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            جميع الملفات التي ترفعها ستظهر في هذا المجلد
-          </p>
+          {subfolders.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">المجلدات الفرعية:</p>
+              <div className="flex flex-wrap gap-2">
+                {subfolders.map(sf => (
+                  <div key={sf.id} className="flex items-center gap-1.5 text-xs bg-secondary/50 px-2 py-1 rounded-md">
+                    <Folder className="h-3 w-3 text-primary" />
+                    <span dir="ltr">{sf.folder_name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              يمكنك إنشاء مجلدات فرعية من صفحة الرفع
+            </p>
+          )}
         </div>
       </div>
     </div>
