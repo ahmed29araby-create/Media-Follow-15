@@ -99,18 +99,27 @@ export default function PrivacyPage() {
   };
 
   const handleEmailChange = async () => {
-    const trimmed = editOrgEmail.trim().toLowerCase();
-    if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
-    if (trimmed === orgEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
-    setEmailChangeLoading(true);
-    // Update org email in DB
-    const { error } = await supabase.from("organizations").update({ email: trimmed }).eq("id", organizationId!);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("تم تحديث البريد الإلكتروني");
-      setOrgEmail(trimmed);
+    if (isOrgUser) {
+      // Admin: update org email
+      const trimmed = editOrgEmail.trim().toLowerCase();
+      if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
+      if (trimmed === orgEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
+      setEmailChangeLoading(true);
+      const { error } = await supabase.from("organizations").update({ email: trimmed }).eq("id", organizationId!);
+      if (error) toast.error(error.message);
+      else { toast.success("تم تحديث البريد الإلكتروني"); setOrgEmail(trimmed); }
+      setEmailChangeLoading(false);
+    } else {
+      // Member: update user's own auth email
+      const trimmed = editUserEmail.trim().toLowerCase();
+      if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
+      if (trimmed === userEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
+      setEmailChangeLoading(true);
+      const { error } = await supabase.auth.updateUser({ email: trimmed });
+      if (error) toast.error(error.message);
+      else { toast.success("تم إرسال رسالة تأكيد إلى البريد الجديد"); setUserEmail(trimmed); }
+      setEmailChangeLoading(false);
     }
-    setEmailChangeLoading(false);
   };
 
   const handlePasswordChange = async () => {
