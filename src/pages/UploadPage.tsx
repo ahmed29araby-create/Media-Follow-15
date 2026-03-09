@@ -32,7 +32,6 @@ export default function UploadPage() {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
-  const [showFolderDropdown, setShowFolderDropdown] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -86,6 +85,10 @@ export default function UploadPage() {
 
   const handleUpload = async () => {
     if (!file || !user) return;
+    if (!selectedSubfolder && subfolders.length > 0) {
+      toast.error("اختر مجلد لرفع المحتوى", { id: "select-folder" });
+      return;
+    }
     setUploading(true);
     setUploadProgress(0);
     setUploadSpeed(0);
@@ -206,69 +209,24 @@ export default function UploadPage() {
         </p>
       </div>
 
-      {/* Subfolder Selector */}
+      {/* Folder Selector */}
       <div className="glass-panel p-4 space-y-3">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block">
-          المجلد الفرعي (اختياري)
-        </Label>
-
-        {/* Dropdown */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowFolderDropdown(v => !v)}
-            className="w-full flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-right hover:bg-accent/30 transition-colors"
-          >
-            <span className="text-foreground flex items-center gap-2">
-              {selectedSubfolder
-                ? <><Folder className="h-4 w-4 text-primary" /><span dir="ltr">{selectedSubfolder}</span></>
-                : <span className="text-muted-foreground">رفع مباشرة في المجلد الرئيسي</span>
-              }
-            </span>
-            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showFolderDropdown && "rotate-180")} />
-          </button>
-
-          {showFolderDropdown && (
-            <div className="absolute top-full mt-1 w-full z-10 rounded-md border border-border bg-background shadow-lg overflow-hidden">
-              <button
-                type="button"
-                onClick={() => { setSelectedSubfolder(""); setShowFolderDropdown(false); }}
-                className={cn(
-                  "w-full text-right px-3 py-2 text-sm hover:bg-accent/30 transition-colors",
-                  !selectedSubfolder && "bg-primary/10 text-primary"
-                )}
-              >
-                المجلد الرئيسي (بدون مجلد فرعي)
-              </button>
-              {subfolders.map(sf => (
-                <button
-                  key={sf.id}
-                  type="button"
-                  onClick={() => { setSelectedSubfolder(sf.folder_name); setShowFolderDropdown(false); }}
-                  className={cn(
-                    "w-full text-right px-3 py-2 text-sm hover:bg-accent/30 transition-colors flex items-center gap-2",
-                    selectedSubfolder === sf.folder_name && "bg-primary/10 text-primary"
-                  )}
-                >
-                  <Folder className="h-4 w-4" />
-                  <span dir="ltr">{sf.folder_name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* New Folder */}
-        {!showNewFolder ? (
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            اختار folder لرفع المحتوى
+          </Label>
           <button
             type="button"
             onClick={() => setShowNewFolder(true)}
-            className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
           >
             <FolderPlus className="h-3.5 w-3.5" />
-            إنشاء مجلد فرعي جديد
+            <span>إضافة folder جديد</span>
           </button>
-        ) : (
+        </div>
+
+        {/* New Folder Input */}
+        {showNewFolder && (
           <div className="flex gap-2 items-center">
             <Input
               value={newFolderName}
@@ -287,38 +245,35 @@ export default function UploadPage() {
             </Button>
           </div>
         )}
-      </div>
 
-      {/* Quality Toggle */}
-      <div className="glass-panel p-4">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
-          اختيار الجودة
-        </Label>
+        {/* Folder Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setQuality("original")}
-            disabled={uploading}
-            className={cn(
-              "flex flex-col items-center gap-2 rounded-lg border p-4 transition-all",
-              quality === "original" ? "border-primary/50 bg-primary/5" : "border-border hover:border-border/80 bg-secondary/30"
-            )}
-          >
-            <HardDrive className={cn("h-6 w-6", quality === "original" ? "text-primary" : "text-muted-foreground")} />
-            <span className={cn("text-sm font-medium", quality === "original" ? "text-primary" : "text-muted-foreground")}>أصلي</span>
-            <span className="text-[10px] text-muted-foreground">جودة كاملة</span>
-          </button>
-          <button
-            onClick={() => setQuality("proxy")}
-            disabled={uploading}
-            className={cn(
-              "flex flex-col items-center gap-2 rounded-lg border p-4 transition-all",
-              quality === "proxy" ? "border-primary/50 bg-primary/5" : "border-border hover:border-border/80 bg-secondary/30"
-            )}
-          >
-            <Zap className={cn("h-6 w-6", quality === "proxy" ? "text-primary" : "text-muted-foreground")} />
-            <span className={cn("text-sm font-medium", quality === "proxy" ? "text-primary" : "text-muted-foreground")}>بروكسي</span>
-            <span className="text-[10px] text-muted-foreground">جودة مخفضة • أسرع</span>
-          </button>
+          {subfolders.length === 0 && !showNewFolder ? (
+            <div className="col-span-2 text-center py-4">
+              <Folder className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">لا توجد مجلدات بعد. أنشئ folder جديد للبدء.</p>
+            </div>
+          ) : (
+            subfolders.map(sf => (
+              <button
+                key={sf.id}
+                type="button"
+                onClick={() => setSelectedSubfolder(sf.folder_name)}
+                disabled={uploading}
+                className={cn(
+                  "flex flex-col items-center gap-2 rounded-lg border p-4 transition-all",
+                  selectedSubfolder === sf.folder_name
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-border hover:border-border/80 bg-secondary/30"
+                )}
+              >
+                <Folder className={cn("h-6 w-6", selectedSubfolder === sf.folder_name ? "text-primary" : "text-muted-foreground")} />
+                <span className={cn("text-sm font-medium", selectedSubfolder === sf.folder_name ? "text-primary" : "text-muted-foreground")} dir="ltr">
+                  {sf.folder_name}
+                </span>
+              </button>
+            ))
+          )}
         </div>
       </div>
 
