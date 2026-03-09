@@ -186,15 +186,17 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
                 )}
               </div>
             </div>
-            <div className="p-1.5">
-              <button
-                onClick={() => { setProfileMenuOpen(false); navigate("/subscription"); }}
-                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <CreditCard className="h-4 w-4" />
-                الاشتراك
-              </button>
-            </div>
+            {(isSuperAdmin || isAdmin) && (
+              <div className="p-1.5">
+                <button
+                  onClick={() => { setProfileMenuOpen(false); navigate("/subscription"); }}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  الاشتراك
+                </button>
+              </div>
+            )}
             <div className="border-t border-white/10 p-1.5">
               <button
                 onClick={() => { setProfileMenuOpen(false); signOut(); }}
