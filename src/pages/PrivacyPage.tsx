@@ -199,7 +199,7 @@ export default function PrivacyPage() {
               تغيير البريد الإلكتروني
               <Mail className="h-3.5 w-3.5 text-muted-foreground" />
             </h3>
-            <Input type="email" value={editOrgEmail} onChange={(e) => setEditOrgEmail(e.target.value)} placeholder="البريد الإلكتروني" dir="ltr" className="text-left" />
+            <Input type="email" value={isOrgUser ? editOrgEmail : editUserEmail} onChange={(e) => isOrgUser ? setEditOrgEmail(e.target.value) : setEditUserEmail(e.target.value)} placeholder="البريد الإلكتروني" dir="ltr" className="text-left" />
             <p className="text-xs text-muted-foreground text-right">سيتم إرسال رسالة تأكيد إلى البريد الجديد قبل التفعيل.</p>
             <div className="flex justify-start">
               <Button size="sm" onClick={handleEmailChange} disabled={emailChangeLoading}>
