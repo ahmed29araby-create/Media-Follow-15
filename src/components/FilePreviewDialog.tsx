@@ -87,6 +87,15 @@ export default function FilePreviewDialog({ open, onOpenChange, storagePath, fil
             <audio src={url} controls autoPlay className="w-full" />
           )}
 
+          {!loading && !error && url && fileType === "pdf" && (
+            <iframe
+              src={`${url}#toolbar=0`}
+              className="w-full rounded-lg border border-border"
+              style={{ height: "70vh" }}
+              title={fileName}
+            />
+          )}
+
           {!loading && !error && url && (fileType === "text" || fileType === "unknown") && (
             <div className="w-full text-center space-y-3">
               <p className="text-sm text-muted-foreground">لا يمكن عرض هذا النوع من الملفات مباشرة</p>
