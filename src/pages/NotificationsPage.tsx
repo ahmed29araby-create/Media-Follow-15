@@ -99,21 +99,24 @@ export default function NotificationsPage() {
         }
         toast.success("تم قبول الطلب وإعادة تفعيل الشركة");
       } else {
-        const { data: orgProfiles } = await supabase
+        const { data: rejOrgProfiles } = await supabase
           .from("profiles")
           .select("user_id")
           .eq("organization_id", notification.organization_id);
-        
-        if (orgProfiles) {
-          for (const p of orgProfiles) {
-            await supabase.from("notifications").insert({
-              user_id: p.user_id,
-              title: "تم رفض طلب إعادة التفعيل",
-              message: "تم رفض طلب إعادة تفعيل الشركة من قِبل إدارة المنصة.",
-              type: "info",
-              organization_id: notification.organization_id,
-            });
-          }
+        const { data: rejAdminRoles } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "admin");
+        const rejAdminIds2 = new Set(rejAdminRoles?.map(r => r.user_id) ?? []);
+        const rejAdmins2 = rejOrgProfiles?.filter(p => rejAdminIds2.has(p.user_id)) ?? [];
+        for (const p of rejAdmins2) {
+          await supabase.from("notifications").insert({
+            user_id: p.user_id,
+            title: "تم رفض طلب إعادة التفعيل",
+            message: "تم رفض طلب إعادة تفعيل الشركة من قِبل إدارة المنصة.",
+            type: "info",
+            organization_id: notification.organization_id,
+          });
         }
         toast.success("تم رفض الطلب");
       }

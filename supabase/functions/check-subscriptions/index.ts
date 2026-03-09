@@ -37,13 +37,19 @@ Deno.serve(async (req) => {
     const endsAt = new Date(sub.ends_at);
     const daysLeft = Math.ceil((endsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Get admin user_id for this org (to send notifications)
+    // Get admin user_ids for this org (to send notifications to admins only)
     const { data: adminProfiles } = await supabase
       .from("profiles")
       .select("user_id")
       .eq("organization_id", org.id);
 
-    const adminUserIds = adminProfiles?.map((p) => p.user_id) ?? [];
+    const { data: adminRoles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin");
+
+    const adminRoleIds = new Set(adminRoles?.map((r: any) => r.user_id) ?? []);
+    const adminUserIds = (adminProfiles?.filter((p: any) => adminRoleIds.has(p.user_id)) ?? []).map((p: any) => p.user_id);
 
     // Check if notification already sent today for this type
     const todayStart = new Date(now);
