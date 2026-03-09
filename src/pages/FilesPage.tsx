@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { FileStack, FileEdit, Trash2, FolderOpen, ArrowRight, User } from "lucide-react";
+import { FileStack, FileEdit, Trash2, FolderOpen, ArrowRight, User, Eye } from "lucide-react";
+import FilePreviewDialog from "@/components/FilePreviewDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,7 @@ export default function FilesPage() {
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; file: FileRow | null }>({ open: false, file: null });
   const [newName, setNewName] = useState("");
   const [reason, setReason] = useState("");
+  const [previewFile, setPreviewFile] = useState<FileRow | null>(null);
   const [memberName, setMemberName] = useState("");
 
   // For admin: load folders view or member files
@@ -206,14 +208,17 @@ export default function FilesPage() {
       <div className="space-y-3">
         {files.map(file => (
           <div key={file.id} className="glass-panel p-4 flex items-center justify-between animate-slide-in">
-            <div className="flex items-center gap-3">
-              <FileStack className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-foreground">{file.file_name}</p>
+            <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => setPreviewFile(file)}>
+              <FileStack className="h-5 w-5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{file.file_name}</p>
                 <p className="text-xs text-muted-foreground">{(file.file_size / 1024 / 1024).toFixed(1)} MB • {file.quality === "original" ? "أصلي" : "بروكسي"}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
+              <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10" onClick={() => setPreviewFile(file)}>
+                <Eye className="h-4 w-4" />
+              </Button>
               {statusBadge(file.status)}
               {!isAdmin && file.status !== "pending" && (
                 <div className="flex gap-1">
@@ -261,6 +266,13 @@ export default function FilesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <FilePreviewDialog
+        open={!!previewFile}
+        onOpenChange={(o) => !o && setPreviewFile(null)}
+        storagePath={previewFile?.storage_path ?? null}
+        fileName={previewFile?.file_name ?? ""}
+        drivePath={previewFile?.drive_path}
+      />
     </div>
   );
 }

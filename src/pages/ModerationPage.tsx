@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Check, X, Film, Clock, FileEdit, Trash2, Loader2 } from "lucide-react";
+import { Check, X, Film, Clock, FileEdit, Trash2, Loader2, Eye } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FilePreviewDialog from "@/components/FilePreviewDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type FileRow = Database["public"]["Tables"]["files"]["Row"];
@@ -19,6 +20,7 @@ export default function ModerationPage() {
   const [pendingFiles, setPendingFiles] = useState<FileRow[]>([]);
   const [changeRequests, setChangeRequests] = useState<ChangeRequestWithFile[]>([]);
   const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set());
+  const [previewFile, setPreviewFile] = useState<FileRow | null>(null);
 
   const fetchData = async () => {
     const [filesRes, requestsRes] = await Promise.all([
@@ -115,14 +117,17 @@ export default function ModerationPage() {
           ) : (
             pendingFiles.map(file => (
               <div key={file.id} className="glass-panel p-4 flex items-center justify-between animate-slide-in">
-                <div className="flex items-center gap-3">
-                  <Film className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{file.file_name}</p>
+                <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => setPreviewFile(file)}>
+                  <Film className="h-5 w-5 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{file.file_name}</p>
                     <p className="text-xs text-muted-foreground">{(file.file_size / 1024 / 1024).toFixed(1)} MB • {file.quality === "original" ? "أصلي" : "بروكسي"}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
+                  <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10" onClick={() => setPreviewFile(file)}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
                   <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleFileAction(file.id, "approved", file)} disabled={syncingFiles.has(file.id)}>
                     {syncingFiles.has(file.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   </Button>
@@ -163,6 +168,14 @@ export default function ModerationPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <FilePreviewDialog
+        open={!!previewFile}
+        onOpenChange={(o) => !o && setPreviewFile(null)}
+        storagePath={previewFile?.storage_path ?? null}
+        fileName={previewFile?.file_name ?? ""}
+        drivePath={previewFile?.drive_path}
+      />
     </div>
   );
 }
