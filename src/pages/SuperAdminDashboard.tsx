@@ -78,6 +78,11 @@ export default function SuperAdminDashboard() {
     org_name: "", org_email: "", admin_password: "", referral_code: "",
   });
 
+  // Registration requests
+  const [requests, setRequests] = useState<OrgRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [processingRequest, setProcessingRequest] = useState<string | null>(null);
+
   const fetchOrgs = async () => {
     const { data } = await supabase.from("organizations").select("*").order("created_at", { ascending: true });
     setOrgs(data ?? []);
