@@ -155,7 +155,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // If file has no storage_path but already has a drive_path, just approve it
     if (!fileRecord.storage_path) {
+      if (fileRecord.drive_path) {
+        await serviceClient
+          .from("files")
+          .update({ status: "approved" })
+          .eq("id", file_id);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            drive_path: fileRecord.drive_path,
+            message: "File already on Drive, approved directly",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       return new Response(JSON.stringify({ error: "No storage path for this file" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
