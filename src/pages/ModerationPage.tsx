@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Check, X, Film, Clock, FileEdit, Trash2, Loader2 } from "lucide-react";
+import { Check, X, Film, Clock, FileEdit, Trash2, Loader2, Eye } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FilePreviewDialog from "@/components/FilePreviewDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type FileRow = Database["public"]["Tables"]["files"]["Row"];
