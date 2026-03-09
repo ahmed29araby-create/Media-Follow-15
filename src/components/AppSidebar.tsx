@@ -177,16 +177,20 @@ export default function AppSidebar({ open, onToggle }: AppSidebarProps) {
               <p className="text-sm font-medium text-white truncate">
                 {isAdmin ? organizationName : (user?.user_metadata?.display_name || user?.email)}
               </p>
-              <div className="flex items-center justify-between mt-0.5">
-                <span className="text-xs text-white/40">
-                  {isSuperAdmin ? "مالك المنصة" : isAdmin ? "مسؤول الشركة" : `عضو في الشركة`}
-                </span>
-                {!isSuperAdmin && !isAdmin && organizationName && (
-                  <span className="text-xs text-white/60 font-medium">{organizationName}</span>
+              <div className="mt-1">
+                {isSuperAdmin ? (
+                  <span className="text-base font-bold text-white">مالك المنصة</span>
+                ) : isAdmin ? (
+                  <span className="text-base font-bold text-white">مسؤول الشركة</span>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-white/70">عضو في شركة</span>
+                    <span className="text-base font-bold text-white">{organizationName}</span>
+                  </div>
                 )}
               </div>
             </div>
-            {(isSuperAdmin || isAdmin) && (
+            {isAdmin && (
               <div className="p-1.5">
                 <button
                   onClick={() => { setProfileMenuOpen(false); navigate("/subscription"); }}
