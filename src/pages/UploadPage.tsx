@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Upload, Film, Loader2, HardDrive, Zap } from "lucide-react";
+import { Upload, Film, Loader2, HardDrive, Zap, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 export default function UploadPage() {
   const { user, organizationId } = useAuth();
@@ -14,7 +15,11 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [folderName, setFolderName] = useState("uploads");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSpeed, setUploadSpeed] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -29,38 +34,129 @@ export default function UploadPage() {
   const handleUpload = async () => {
     if (!file || !user) return;
     setUploading(true);
+    setUploadProgress(0);
+    setUploadSpeed(0);
+    setTimeRemaining(null);
 
     const fileExtension = file.name.split('.').pop();
     const safeFileName = crypto.randomUUID() + (fileExtension ? `.${fileExtension}` : '');
     const storagePath = `${user.id}/${Date.now()}_${safeFileName}`;
-    const { error: storageError } = await supabase.storage
-      .from("pending_uploads")
-      .upload(storagePath, file);
 
-    if (storageError) {
-      toast.error("فشل الرفع: " + storageError.message);
+    try {
+      // Get session for auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("يرجى تسجيل الدخول أولاً");
+        setUploading(false);
+        return;
+      }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const uploadUrl = `${supabaseUrl}/storage/v1/object/pending_uploads/${storagePath}`;
+
+      // Use XMLHttpRequest for progress tracking
+      const uploaded = await new Promise<boolean>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
+        let startTime = Date.now();
+        let lastLoaded = 0;
+        let lastTime = startTime;
+
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            setUploadProgress(percent);
+
+            const now = Date.now();
+            const elapsed = (now - lastTime) / 1000;
+            if (elapsed > 0.5) {
+              const bytesPerSec = (e.loaded - lastLoaded) / elapsed;
+              setUploadSpeed(bytesPerSec);
+              const remaining = (e.total - e.loaded) / bytesPerSec;
+              setTimeRemaining(remaining > 0 ? remaining : null);
+              lastLoaded = e.loaded;
+              lastTime = now;
+            }
+          }
+        });
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(true);
+          } else {
+            try {
+              const err = JSON.parse(xhr.responseText);
+              reject(new Error(err.message || err.error || `خطأ ${xhr.status}`));
+            } catch {
+              reject(new Error(`خطأ في الرفع: ${xhr.status}`));
+            }
+          }
+        });
+
+        xhr.addEventListener("error", () => reject(new Error("فشل الاتصال بالخادم")));
+        xhr.addEventListener("abort", () => reject(new Error("تم إلغاء الرفع")));
+
+        xhr.open("POST", uploadUrl);
+        xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
+        xhr.setRequestHeader("apikey", import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+        xhr.setRequestHeader("x-upsert", "true");
+        xhr.send(file);
+      });
+
+      if (!uploaded) {
+        setUploading(false);
+        return;
+      }
+
+      // Insert file record in DB
+      const { error: dbError } = await supabase.from("files").insert({
+        user_id: user.id,
+        file_name: file.name,
+        file_path: `${folderName}/${file.name}`,
+        file_size: file.size,
+        quality,
+        status: "pending",
+        storage_path: storagePath,
+        organization_id: organizationId,
+      });
+
+      if (dbError) {
+        toast.error("فشل تسجيل الملف: " + dbError.message);
+      } else {
+        toast.success("تم الرفع! في انتظار موافقة المسؤول.");
+        setFile(null);
+      }
+    } catch (err: any) {
+      if (err.message !== "تم إلغاء الرفع") {
+        toast.error("فشل الرفع: " + err.message);
+      }
+    } finally {
       setUploading(false);
-      return;
+      setUploadProgress(0);
+      setUploadSpeed(0);
+      setTimeRemaining(null);
+      xhrRef.current = null;
     }
+  };
 
-    const { error: dbError } = await supabase.from("files").insert({
-      user_id: user.id,
-      file_name: file.name,
-      file_path: `${folderName}/${file.name}`,
-      file_size: file.size,
-      quality,
-      status: "pending",
-      storage_path: storagePath,
-      organization_id: organizationId,
-    });
-
-    if (dbError) {
-      toast.error("فشل تسجيل الملف: " + dbError.message);
-    } else {
-      toast.success("تم الرفع! في انتظار موافقة المسؤول.");
-      setFile(null);
+  const cancelUpload = () => {
+    if (xhrRef.current) {
+      xhrRef.current.abort();
+      toast.info("تم إلغاء الرفع");
     }
-    setUploading(false);
+  };
+
+  const formatSpeed = (bytesPerSec: number) => {
+    if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+    if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+    return `${bytesPerSec.toFixed(0)} B/s`;
+  };
+
+  const formatTime = (seconds: number) => {
+    if (seconds < 60) return `${Math.ceil(seconds)} ثانية`;
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.ceil(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')} دقيقة`;
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -86,6 +182,7 @@ export default function UploadPage() {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => setQuality("original")}
+            disabled={uploading}
             className={cn(
               "flex flex-col items-center gap-2 rounded-lg border p-4 transition-all",
               quality === "original" ? "border-primary/50 bg-primary/5" : "border-border hover:border-border/80 bg-secondary/30"
@@ -97,6 +194,7 @@ export default function UploadPage() {
           </button>
           <button
             onClick={() => setQuality("proxy")}
+            disabled={uploading}
             className={cn(
               "flex flex-col items-center gap-2 rounded-lg border p-4 transition-all",
               quality === "proxy" ? "border-primary/50 bg-primary/5" : "border-border hover:border-border/80 bg-secondary/30"
@@ -114,11 +212,12 @@ export default function UploadPage() {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !uploading && inputRef.current?.click()}
         className={cn(
           "glass-panel flex flex-col items-center justify-center gap-4 p-12 cursor-pointer transition-all",
           dragOver && "glow-border bg-primary/5",
-          file && "border-primary/30"
+          file && "border-primary/30",
+          uploading && "pointer-events-none opacity-70"
         )}
       >
         <input ref={inputRef} type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])} />
@@ -141,10 +240,31 @@ export default function UploadPage() {
         )}
       </div>
 
-      <Button onClick={handleUpload} disabled={!file || uploading} className="w-full">
-        {uploading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-        {uploading ? "جاري الرفع..." : "إرسال للمراجعة"}
-      </Button>
+      {/* Upload Progress */}
+      {uploading && (
+        <div className="glass-panel p-4 space-y-3 animate-slide-in">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">جاري الرفع...</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-primary">{uploadProgress}%</span>
+              <Button size="sm" variant="ghost" onClick={cancelUpload} className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <Progress value={uploadProgress} className="h-2" />
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{uploadSpeed > 0 ? formatSpeed(uploadSpeed) : "جاري الحساب..."}</span>
+            <span>{timeRemaining !== null ? `متبقي ${formatTime(timeRemaining)}` : ""}</span>
+          </div>
+        </div>
+      )}
+
+      {!uploading && (
+        <Button onClick={handleUpload} disabled={!file} className="w-full">
+          إرسال للمراجعة
+        </Button>
+      )}
     </div>
   );
 }
