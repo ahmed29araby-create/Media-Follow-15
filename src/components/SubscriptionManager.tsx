@@ -200,21 +200,25 @@ export default function SubscriptionManager({ organizationId, organizationName }
     if (error) {
       toast.error(error.message);
     } else {
-      // Send cancellation notification to org members
+      // Send cancellation notification to org admins only
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id")
         .eq("organization_id", organizationId);
-      if (profiles) {
-        for (const p of profiles) {
-          await supabase.from("notifications").insert({
-            user_id: p.user_id,
-            organization_id: organizationId,
-            title: "⛔ تم إلغاء الاشتراك",
-            message: `تم إلغاء اشتراك ${organizationName} يدوياً من قبل إدارة الموقع. يرجى التواصل لتجديد الاشتراك.`,
-            type: "sub_cancelled",
-          });
-        }
+      const { data: cancelAdminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      const cancelAdminIds = new Set(cancelAdminRoles?.map(r => r.user_id) ?? []);
+      const cancelAdminProfiles = profiles?.filter(p => cancelAdminIds.has(p.user_id)) ?? [];
+      for (const p of cancelAdminProfiles) {
+        await supabase.from("notifications").insert({
+          user_id: p.user_id,
+          organization_id: organizationId,
+          title: "⛔ تم إلغاء الاشتراك",
+          message: `تم إلغاء اشتراك ${organizationName} يدوياً من قبل إدارة الموقع. يرجى التواصل لتجديد الاشتراك.`,
+          type: "sub_cancelled",
+        });
       }
       toast.success("تم إلغاء الاشتراك بنجاح");
       setCancelOpen(false);
