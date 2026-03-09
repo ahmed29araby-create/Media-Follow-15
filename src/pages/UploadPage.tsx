@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,12 @@ export default function UploadPage() {
     setUploadSpeed(0);
     setTimeRemaining(null);
 
+    const fileExtension = file.name.split('.').pop();
+    const safeFileName = crypto.randomUUID() + (fileExtension ? `.${fileExtension}` : '');
+    const storagePath = `${user.id}/${Date.now()}_${safeFileName}`;
+
     try {
+      // Get session for auth token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("يرجى تسجيل الدخول أولاً");
@@ -47,20 +52,15 @@ export default function UploadPage() {
       }
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const uploadUrl = `${supabaseUrl}/functions/v1/upload-to-drive`;
+      const uploadUrl = `${supabaseUrl}/storage/v1/object/pending_uploads/${storagePath}`;
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("file_name", file.name);
-      formData.append("quality", quality);
-      formData.append("folder_name", folderName);
-      if (organizationId) formData.append("organization_id", organizationId);
-
-      const result = await new Promise<any>((resolve, reject) => {
+      // Use XMLHttpRequest for progress tracking
+      const uploaded = await new Promise<boolean>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhrRef.current = xhr;
+        let startTime = Date.now();
         let lastLoaded = 0;
-        let lastTime = Date.now();
+        let lastTime = startTime;
 
         xhr.upload.addEventListener("progress", (e) => {
           if (e.lengthComputable) {
@@ -81,15 +81,15 @@ export default function UploadPage() {
         });
 
         xhr.addEventListener("load", () => {
-          try {
-            const data = JSON.parse(xhr.responseText);
-            if (xhr.status >= 200 && xhr.status < 300 && data.success) {
-              resolve(data);
-            } else {
-              reject(new Error(data.error || `خطأ ${xhr.status}`));
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(true);
+          } else {
+            try {
+              const err = JSON.parse(xhr.responseText);
+              reject(new Error(err.message || err.error || `خطأ ${xhr.status}`));
+            } catch {
+              reject(new Error(`خطأ في الرفع: ${xhr.status}`));
             }
-          } catch {
-            reject(new Error(`خطأ في الرفع: ${xhr.status}`));
           }
         });
 
@@ -99,11 +99,33 @@ export default function UploadPage() {
         xhr.open("POST", uploadUrl);
         xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
         xhr.setRequestHeader("apikey", import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-        xhr.send(formData);
+        xhr.setRequestHeader("x-upsert", "true");
+        xhr.send(file);
       });
 
-      toast.success("تم الرفع بنجاح على Google Drive! في انتظار موافقة المسؤول.");
-      setFile(null);
+      if (!uploaded) {
+        setUploading(false);
+        return;
+      }
+
+      // Insert file record in DB
+      const { error: dbError } = await supabase.from("files").insert({
+        user_id: user.id,
+        file_name: file.name,
+        file_path: `${folderName}/${file.name}`,
+        file_size: file.size,
+        quality,
+        status: "pending",
+        storage_path: storagePath,
+        organization_id: organizationId,
+      });
+
+      if (dbError) {
+        toast.error("فشل تسجيل الملف: " + dbError.message);
+      } else {
+        toast.success("تم الرفع! في انتظار موافقة المسؤول.");
+        setFile(null);
+      }
     } catch (err: any) {
       if (err.message !== "تم إلغاء الرفع") {
         toast.error("فشل الرفع: " + err.message);
@@ -212,7 +234,7 @@ export default function UploadPage() {
             <Upload className="h-10 w-10 text-muted-foreground" />
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">اسحب الفيديو هنا أو اضغط للتصفح</p>
-              <p className="text-xs text-muted-foreground">يدعم جميع صيغ الفيديو • يتم الرفع مباشرة على Google Drive</p>
+              <p className="text-xs text-muted-foreground">يدعم جميع صيغ الفيديو</p>
             </div>
           </>
         )}
@@ -222,7 +244,7 @@ export default function UploadPage() {
       {uploading && (
         <div className="glass-panel p-4 space-y-3 animate-slide-in">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">جاري الرفع إلى Google Drive...</span>
+            <span className="text-sm font-medium text-foreground">جاري الرفع...</span>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-primary">{uploadProgress}%</span>
               <Button size="sm" variant="ghost" onClick={cancelUpload} className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
