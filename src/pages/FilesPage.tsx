@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { FileStack, FileEdit, Trash2, FolderOpen, ArrowRight, Eye, Folder, ChevronDown, ChevronLeft } from "lucide-react";
+import { FileStack, FileEdit, Trash2, FolderOpen, ArrowRight, Eye, Folder } from "lucide-react";
 import FilePreviewDialog from "@/components/FilePreviewDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
