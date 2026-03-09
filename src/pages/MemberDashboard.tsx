@@ -8,13 +8,15 @@ export default function MemberDashboard() {
   const { user, organizationName } = useAuth();
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0, earnings: 0, pricePerVideo: 0 });
   const [folderName, setFolderName] = useState("uploads");
+  const [subfolders, setSubfolders] = useState<{ id: string; folder_name: string }[]>([]);
 
   useEffect(() => {
     if (!user) return;
-    const fetchStats = async () => {
-      const [filesRes, settingsRes] = await Promise.all([
+    const fetchData = async () => {
+      const [filesRes, settingsRes, subfoldersRes] = await Promise.all([
         supabase.from("files").select("status").eq("user_id", user.id),
         supabase.from("member_settings").select("price_per_video, folder_name").eq("user_id", user.id).single(),
+        supabase.from("member_subfolders").select("id, folder_name").eq("user_id", user.id).order("created_at", { ascending: true }),
       ]);
 
       const files = filesRes.data ?? [];
@@ -22,6 +24,7 @@ export default function MemberDashboard() {
       const approved = files.filter(f => f.status === "approved").length;
 
       setFolderName(settingsRes.data?.folder_name ?? "uploads");
+      setSubfolders(subfoldersRes.data ?? []);
       setStats({
         pending: files.filter(f => f.status === "pending").length,
         approved,
@@ -31,7 +34,7 @@ export default function MemberDashboard() {
         pricePerVideo: price,
       });
     };
-    fetchStats();
+    fetchData();
   }, [user]);
 
   const cards = [
