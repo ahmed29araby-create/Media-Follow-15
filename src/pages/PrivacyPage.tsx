@@ -48,6 +48,9 @@ export default function PrivacyPage() {
   const [editOrgEmail, setEditOrgEmail] = useState("");
   const [savingOrg, setSavingOrg] = useState(false);
 
+  const [userEmail, setUserEmail] = useState(user?.email || "");
+  const [editUserEmail, setEditUserEmail] = useState(user?.email || "");
+  
   const [editDisplayName, setEditDisplayName] = useState("");
   const [savingDisplayName, setSavingDisplayName] = useState(false);
 
@@ -96,18 +99,27 @@ export default function PrivacyPage() {
   };
 
   const handleEmailChange = async () => {
-    const trimmed = editOrgEmail.trim().toLowerCase();
-    if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
-    if (trimmed === orgEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
-    setEmailChangeLoading(true);
-    // Update org email in DB
-    const { error } = await supabase.from("organizations").update({ email: trimmed }).eq("id", organizationId!);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("تم تحديث البريد الإلكتروني");
-      setOrgEmail(trimmed);
+    if (isOrgUser) {
+      // Admin: update org email
+      const trimmed = editOrgEmail.trim().toLowerCase();
+      if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
+      if (trimmed === orgEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
+      setEmailChangeLoading(true);
+      const { error } = await supabase.from("organizations").update({ email: trimmed }).eq("id", organizationId!);
+      if (error) toast.error(error.message);
+      else { toast.success("تم تحديث البريد الإلكتروني"); setOrgEmail(trimmed); }
+      setEmailChangeLoading(false);
+    } else {
+      // Member: update user's own auth email
+      const trimmed = editUserEmail.trim().toLowerCase();
+      if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
+      if (trimmed === userEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
+      setEmailChangeLoading(true);
+      const { error } = await supabase.auth.updateUser({ email: trimmed });
+      if (error) toast.error(error.message);
+      else { toast.success("تم إرسال رسالة تأكيد إلى البريد الجديد"); setUserEmail(trimmed); }
+      setEmailChangeLoading(false);
     }
-    setEmailChangeLoading(false);
   };
 
   const handlePasswordChange = async () => {
@@ -187,7 +199,7 @@ export default function PrivacyPage() {
               تغيير البريد الإلكتروني
               <Mail className="h-3.5 w-3.5 text-muted-foreground" />
             </h3>
-            <Input type="email" value={editOrgEmail} onChange={(e) => setEditOrgEmail(e.target.value)} placeholder="البريد الإلكتروني" dir="ltr" className="text-left" />
+            <Input type="email" value={isOrgUser ? editOrgEmail : editUserEmail} onChange={(e) => isOrgUser ? setEditOrgEmail(e.target.value) : setEditUserEmail(e.target.value)} placeholder="البريد الإلكتروني" dir="ltr" className="text-left" />
             <p className="text-xs text-muted-foreground text-right">سيتم إرسال رسالة تأكيد إلى البريد الجديد قبل التفعيل.</p>
             <div className="flex justify-start">
               <Button size="sm" onClick={handleEmailChange} disabled={emailChangeLoading}>
