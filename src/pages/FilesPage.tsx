@@ -4,13 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { FileStack, FileEdit, Trash2, FolderOpen, ArrowRight, Eye, Folder, ChevronDown, ChevronLeft } from "lucide-react";
+import { FileStack, FileEdit, Trash2, FolderOpen, ArrowRight, Eye, Folder } from "lucide-react";
 import FilePreviewDialog from "@/components/FilePreviewDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -23,16 +22,15 @@ interface MemberFolder {
   file_count: number;
 }
 
-interface GroupedFiles {
+interface SubfolderGroup {
   folderName: string;
   files: FileRow[];
 }
 
-function groupFilesBySubfolder(fileList: FileRow[]): GroupedFiles[] {
+function groupFilesBySubfolder(fileList: FileRow[]): SubfolderGroup[] {
   const grouped: Record<string, FileRow[]> = {};
   fileList.forEach(file => {
     const parts = file.file_path.split("/");
-    // path format: mainFolder/subfolder/filename or mainFolder/filename
     const subfolder = parts.length > 2 ? parts[1] : "المجلد الرئيسي";
     if (!grouped[subfolder]) grouped[subfolder] = [];
     grouped[subfolder].push(file);
@@ -55,20 +53,9 @@ export default function FilesPage() {
   const [reason, setReason] = useState("");
   const [previewFile, setPreviewFile] = useState<FileRow | null>(null);
   const [memberName, setMemberName] = useState("");
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+  const [selectedSubfolder, setSelectedSubfolder] = useState<string | null>(null);
 
   const groupedFiles = useMemo(() => groupFilesBySubfolder(files), [files]);
-
-  const toggleFolder = (name: string) => {
-    setOpenFolders(prev => ({ ...prev, [name]: !prev[name] }));
-  };
-
-  // Initialize all folders as open
-  useEffect(() => {
-    const initial: Record<string, boolean> = {};
-    groupedFiles.forEach(g => { initial[g.folderName] = true; });
-    setOpenFolders(initial);
-  }, [groupedFiles.length]);
 
   const fetchFolders = async () => {
     if (!organizationId) return;
@@ -241,57 +228,8 @@ export default function FilesPage() {
     );
   }
 
-  // File list view grouped by subfolders
-  return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6" dir="rtl">
-      <div className="text-center space-y-1 pb-4 border-b border-border">
-        {isAdmin && memberFilter && (
-          <button
-            onClick={() => navigate("/files")}
-            className="inline-flex items-center gap-1 text-xs text-primary hover:underline mb-2"
-          >
-            <ArrowRight className="h-3 w-3" />
-            العودة للمجلدات
-          </button>
-        )}
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
-          {isAdmin && memberName ? `ملفات ${memberName}` : "ملفاتي"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {isAdmin ? "عرض محتوى العضو" : "عرض وإدارة ملفاتك"}
-        </p>
-      </div>
-
-      {files.length === 0 ? (
-        <div className="glass-panel p-8 text-center">
-          <FolderOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">لا توجد ملفات بعد</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {groupedFiles.map(group => (
-            <Collapsible
-              key={group.folderName}
-              open={openFolders[group.folderName] !== false}
-              onOpenChange={() => toggleFolder(group.folderName)}
-            >
-              <CollapsibleTrigger className="w-full flex items-center gap-2 p-3 rounded-lg bg-secondary/40 hover:bg-secondary/60 transition-colors">
-                <ChevronDown className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform",
-                  openFolders[group.folderName] === false && "-rotate-90"
-                )} />
-                <Folder className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-foreground flex-1 text-right" dir="ltr">{group.folderName}</span>
-                <span className="text-xs text-muted-foreground">{group.files.length} ملف</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 mt-2 pr-2">
-                {group.files.map(renderFileItem)}
-              </CollapsibleContent>
-            </Collapsible>
-          ))}
-        </div>
-      )}
-
+  const renderDialogs = () => (
+    <>
       <Dialog open={editDialog.open} onOpenChange={o => setEditDialog({ open: o, file: editDialog.file })}>
         <DialogContent className="bg-card border-border" dir="rtl">
           <DialogHeader><DialogTitle className="text-foreground">طلب إعادة تسمية</DialogTitle></DialogHeader>
@@ -317,6 +255,7 @@ export default function FilesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <FilePreviewDialog
         open={!!previewFile}
         onOpenChange={(o) => !o && setPreviewFile(null)}
@@ -324,6 +263,97 @@ export default function FilesPage() {
         fileName={previewFile?.file_name ?? ""}
         drivePath={previewFile?.drive_path}
       />
+    </>
+  );
+
+  // Subfolder selected - show files in that subfolder
+  if (selectedSubfolder) {
+    const currentGroup = groupedFiles.find(g => g.folderName === selectedSubfolder);
+    const currentFiles = currentGroup?.files ?? [];
+
+    return (
+      <div className="p-6 max-w-2xl mx-auto space-y-6" dir="rtl">
+        <div className="text-center space-y-1 pb-4 border-b border-border">
+          <button
+            onClick={() => setSelectedSubfolder(null)}
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline mb-2"
+          >
+            <ArrowRight className="h-3 w-3" />
+            العودة للمجلدات
+          </button>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+            {selectedSubfolder}
+          </h1>
+          <p className="text-sm text-muted-foreground">{currentFiles.length} ملف</p>
+        </div>
+
+        {currentFiles.length === 0 ? (
+          <div className="glass-panel p-8 text-center">
+            <FolderOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">لا توجد ملفات في هذا المجلد</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {currentFiles.map(renderFileItem)}
+          </div>
+        )}
+
+        {renderDialogs()}
+      </div>
+    );
+  }
+
+  // File list view - show subfolders as grid
+  return (
+    <div className="p-6 max-w-2xl mx-auto space-y-6" dir="rtl">
+      <div className="text-center space-y-1 pb-4 border-b border-border">
+        {isAdmin && memberFilter && (
+          <button
+            onClick={() => navigate("/files")}
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline mb-2"
+          >
+            <ArrowRight className="h-3 w-3" />
+            العودة للمجلدات
+          </button>
+        )}
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+          {isAdmin && memberName ? `ملفات ${memberName}` : "ملفاتي"}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {isAdmin ? "عرض محتوى العضو" : "عرض وإدارة ملفاتك"}
+        </p>
+      </div>
+
+      {files.length === 0 ? (
+        <div className="glass-panel p-8 text-center">
+          <FolderOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">لا توجد ملفات بعد</p>
+        </div>
+      ) : groupedFiles.length === 1 ? (
+        // Only one folder - show files directly
+        <div className="space-y-2">
+          {groupedFiles[0].files.map(renderFileItem)}
+        </div>
+      ) : (
+        // Multiple folders - show as grid
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {groupedFiles.map(group => (
+            <button
+              key={group.folderName}
+              onClick={() => setSelectedSubfolder(group.folderName)}
+              className="glass-panel p-5 text-center hover:bg-secondary/60 transition-colors cursor-pointer group"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
+                <FolderOpen className="h-7 w-7 text-primary" />
+              </div>
+              <p className="text-xs font-bold text-foreground mb-0.5" dir="ltr">{group.folderName}</p>
+              <p className="text-[10px] text-muted-foreground">{group.files.length} ملف</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {renderDialogs()}
     </div>
   );
 }
