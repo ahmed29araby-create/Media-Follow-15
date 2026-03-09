@@ -197,20 +197,22 @@ export default function SettingsPage() {
         )}
       </div>
 
-      <div className="glass-panel p-6 space-y-4">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><FolderOpen className="h-4 w-4 text-primary" /></div>
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">مسار الحفظ</h2>
-            <p className="text-xs text-muted-foreground">تحديد مسار المجلد للملفات المعتمدة</p>
+      {!isSuperAdmin && (
+        <div className="glass-panel p-6 space-y-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><FolderOpen className="h-4 w-4 text-primary" /></div>
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">مسار الحفظ</h2>
+              <p className="text-xs text-muted-foreground">تحديد مسار المجلد للملفات المعتمدة</p>
+            </div>
           </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2"><FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />مسار المجلد</Label>
+            <Input value={driveFolderPath} onChange={e => setDriveFolderPath(e.target.value)} placeholder="/Production/Uploads/2026" dir="ltr" className="text-left" />
+          </div>
+          <Button onClick={() => saveSetting("drive_folder_path", driveFolderPath)} disabled={saving}>{saving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}حفظ الإعدادات</Button>
         </div>
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2"><FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />مسار المجلد</Label>
-          <Input value={driveFolderPath} onChange={e => setDriveFolderPath(e.target.value)} placeholder="/Production/Uploads/2026" dir="ltr" className="text-left" />
-        </div>
-        <Button onClick={() => saveSetting("drive_folder_path", driveFolderPath)} disabled={saving}>{saving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}حفظ الإعدادات</Button>
-      </div>
+      )}
 
       {/* Referral Card - for org admins */}
       {!isSuperAdmin && <ReferralCard />}
