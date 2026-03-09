@@ -91,8 +91,8 @@ export default function ReferralCard() {
         <p className="text-xs font-semibold text-foreground">كيف يعمل نظام الإحالة؟</p>
         <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
           <li>شارك كود الخصم الخاص بك مع الآخرين</li>
-          <li>عندما يستخدم شخص الكود عند الاشتراك، يحصل على خصم فوري</li>
-          <li>وأنت تحصل على رصيد بنسبة من قيمة اشتراكه</li>
+          <li>عندما يستخدم شخص الكود عند الاشتراك، يحصل على خصم فوري <span className="font-semibold text-success">{info.userPercentage}%</span></li>
+          <li>وأنت تحصل على رصيد بنسبة <span className="font-semibold text-primary">{info.ownerPercentage}%</span> من قيمة اشتراكه</li>
           <li>استخدم رصيدك للحصول على خصم على باقتك القادمة</li>
         </ol>
       </div>
