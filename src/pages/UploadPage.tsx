@@ -221,7 +221,7 @@ export default function UploadPage() {
             className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
           >
             <FolderPlus className="h-3.5 w-3.5" />
-            <span>إضافة folder جديد</span>
+            <span>إضافة فولدر جديد</span>
           </button>
         </div>
 
