@@ -34,6 +34,7 @@ export default function FilesPage() {
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; file: FileRow | null }>({ open: false, file: null });
   const [newName, setNewName] = useState("");
   const [reason, setReason] = useState("");
+  const [previewFile, setPreviewFile] = useState<FileRow | null>(null);
   const [memberName, setMemberName] = useState("");
 
   // For admin: load folders view or member files
