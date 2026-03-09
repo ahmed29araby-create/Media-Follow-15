@@ -151,7 +151,7 @@ export default function UploadPage() {
         file_name: file.name,
         file_path: filePath,
         file_size: file.size,
-        quality,
+        quality: "original",
         status: "pending",
         storage_path: storagePath,
         organization_id: organizationId,
