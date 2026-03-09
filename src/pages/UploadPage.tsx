@@ -17,7 +17,6 @@ interface Subfolder {
 export default function UploadPage() {
   const { user, organizationId } = useAuth();
   const [file, setFile] = useState<File | null>(null);
-  const [quality, setQuality] = useState<"original" | "proxy">("original");
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [mainFolder, setMainFolder] = useState("uploads");
