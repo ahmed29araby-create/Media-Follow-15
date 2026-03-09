@@ -11,11 +11,12 @@ interface FilePreviewDialogProps {
   drivePath?: string | null;
 }
 
-function getFileType(fileName: string): "video" | "image" | "audio" | "text" | "unknown" {
+function getFileType(fileName: string): "video" | "image" | "audio" | "pdf" | "text" | "unknown" {
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   if (["mp4", "mov", "webm", "avi", "mkv", "m4v"].includes(ext)) return "video";
   if (["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "heic"].includes(ext)) return "image";
   if (["mp3", "wav", "ogg", "m4a", "aac"].includes(ext)) return "audio";
+  if (ext === "pdf") return "pdf";
   if (["txt", "md", "csv", "json", "xml"].includes(ext)) return "text";
   return "unknown";
 }
