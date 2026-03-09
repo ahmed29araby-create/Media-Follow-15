@@ -155,7 +155,7 @@ export default function AdminTeamPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>الاسم</Label>
-                <Input value={form.display_name} onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))} placeholder="محمد أحمد" />
+                <Input value={form.display_name} onChange={e => setForm(f => ({ ...f, display_name: e.target.value, folder_name: e.target.value }))} placeholder="محمد أحمد" />
               </div>
               <div className="space-y-2">
                 <Label>البريد الإلكتروني</Label>
