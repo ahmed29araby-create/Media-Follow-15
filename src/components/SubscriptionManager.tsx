@@ -154,21 +154,25 @@ export default function SubscriptionManager({ organizationId, organizationName }
     if (error) {
       toast.error(error.message);
     } else {
-      // Send notification to org members
+      // Send notification to org admins only
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id")
         .eq("organization_id", organizationId);
-      if (profiles) {
-        for (const p of profiles) {
-          await supabase.from("notifications").insert({
-            user_id: p.user_id,
-            organization_id: organizationId,
-            title: "🎁 تم تجديد الاشتراك مجاناً",
-            message: `تم تجديد اشتراك ${organizationName} مجاناً من صاحب الموقع لمدة ${months} شهر.`,
-            type: "sub_free_grant",
-          });
-        }
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      const adminIds = new Set(adminRoles?.map(r => r.user_id) ?? []);
+      const adminProfiles = profiles?.filter(p => adminIds.has(p.user_id)) ?? [];
+      for (const p of adminProfiles) {
+        await supabase.from("notifications").insert({
+          user_id: p.user_id,
+          organization_id: organizationId,
+          title: "🎁 تم تجديد الاشتراك مجاناً",
+          message: `تم تجديد اشتراك ${organizationName} مجاناً من صاحب الموقع لمدة ${months} شهر.`,
+          type: "sub_free_grant",
+        });
       }
       toast.success(`تم تحديث الاشتراك المجاني لمدة ${months} شهر`);
       setGrantOpen(false);
@@ -196,21 +200,25 @@ export default function SubscriptionManager({ organizationId, organizationName }
     if (error) {
       toast.error(error.message);
     } else {
-      // Send cancellation notification to org members
+      // Send cancellation notification to org admins only
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id")
         .eq("organization_id", organizationId);
-      if (profiles) {
-        for (const p of profiles) {
-          await supabase.from("notifications").insert({
-            user_id: p.user_id,
-            organization_id: organizationId,
-            title: "⛔ تم إلغاء الاشتراك",
-            message: `تم إلغاء اشتراك ${organizationName} يدوياً من قبل إدارة الموقع. يرجى التواصل لتجديد الاشتراك.`,
-            type: "sub_cancelled",
-          });
-        }
+      const { data: cancelAdminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      const cancelAdminIds = new Set(cancelAdminRoles?.map(r => r.user_id) ?? []);
+      const cancelAdminProfiles = profiles?.filter(p => cancelAdminIds.has(p.user_id)) ?? [];
+      for (const p of cancelAdminProfiles) {
+        await supabase.from("notifications").insert({
+          user_id: p.user_id,
+          organization_id: organizationId,
+          title: "⛔ تم إلغاء الاشتراك",
+          message: `تم إلغاء اشتراك ${organizationName} يدوياً من قبل إدارة الموقع. يرجى التواصل لتجديد الاشتراك.`,
+          type: "sub_cancelled",
+        });
       }
       toast.success("تم إلغاء الاشتراك بنجاح");
       setCancelOpen(false);
@@ -267,21 +275,25 @@ export default function SubscriptionManager({ organizationId, organizationName }
     if (subError) {
       toast.error("حدث خطأ أثناء الموافقة");
     } else {
-      // Send notification to org members
-      const { data: profiles } = await supabase
+      // Send notification to org admins only
+      const { data: approveProfiles } = await supabase
         .from("profiles")
         .select("user_id")
         .eq("organization_id", payment.organization_id);
-      if (profiles) {
-        for (const p of profiles) {
-          await supabase.from("notifications").insert({
-            user_id: p.user_id,
-            organization_id: payment.organization_id,
-            title: "✅ تم تجديد الاشتراك",
-            message: `تم الموافقة على طلب الاشتراك وتفعيل الحساب لمدة ${payment.months} شهر.`,
-            type: "sub_approved",
-          });
-        }
+      const { data: approveAdminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      const approveAdminIds = new Set(approveAdminRoles?.map(r => r.user_id) ?? []);
+      const approveAdminProfiles = approveProfiles?.filter(p => approveAdminIds.has(p.user_id)) ?? [];
+      for (const p of approveAdminProfiles) {
+        await supabase.from("notifications").insert({
+          user_id: p.user_id,
+          organization_id: payment.organization_id,
+          title: "✅ تم تجديد الاشتراك",
+          message: `تم الموافقة على طلب الاشتراك وتفعيل الحساب لمدة ${payment.months} شهر.`,
+          type: "sub_approved",
+        });
       }
       toast.success("تم تفعيل الاشتراك بنجاح");
       fetchData();

@@ -215,22 +215,25 @@ export default function AdminSubscriptionsPage() {
             expires_at: expiresAt.toISOString(),
           });
 
-          // Notify code owner
+          // Notify code owner (admin only)
           const { data: ownerProfiles } = await supabase
             .from("profiles")
             .select("user_id")
             .eq("organization_id", codeData.organization_id);
-
-          if (ownerProfiles) {
-            for (const p of ownerProfiles) {
-              await supabase.from("notifications").insert({
-                user_id: p.user_id,
-                organization_id: codeData.organization_id,
-                title: "🎉 حصلت على رصيد إحالة!",
-                message: `تم إضافة ${creditAmount} جنيه رصيد لحسابك — شخص استخدم كود الخصم بتاعك. صالح لمدة ${expiryMonths} شهور.`,
-                type: "referral_credit",
-              });
-            }
+          const { data: ownerAdminRoles } = await supabase
+            .from("user_roles")
+            .select("user_id")
+            .eq("role", "admin");
+          const ownerAdminIds = new Set(ownerAdminRoles?.map(r => r.user_id) ?? []);
+          const ownerAdmins = ownerProfiles?.filter(p => ownerAdminIds.has(p.user_id)) ?? [];
+          for (const p of ownerAdmins) {
+            await supabase.from("notifications").insert({
+              user_id: p.user_id,
+              organization_id: codeData.organization_id,
+              title: "🎉 حصلت على رصيد إحالة!",
+              message: `تم إضافة ${creditAmount} جنيه رصيد لحسابك — شخص استخدم كود الخصم بتاعك. صالح لمدة ${expiryMonths} شهور.`,
+              type: "referral_credit",
+            });
           }
         }
       }
@@ -242,17 +245,20 @@ export default function AdminSubscriptionsPage() {
       .from("profiles")
       .select("user_id")
       .eq("organization_id", payment.organization_id);
-
-    if (profiles) {
-      for (const p of profiles) {
-        await supabase.from("notifications").insert({
-          user_id: p.user_id,
-          organization_id: payment.organization_id,
-          title: "✅ تم تجديد الاشتراك",
-          message: `تم الموافقة على طلب الاشتراك وتفعيل الحساب لمدة ${payment.months} شهر.`,
-          type: "sub_approved",
-        });
-      }
+    const { data: subAdminRoles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin");
+    const subAdminIds = new Set(subAdminRoles?.map(r => r.user_id) ?? []);
+    const subAdmins = profiles?.filter(p => subAdminIds.has(p.user_id)) ?? [];
+    for (const p of subAdmins) {
+      await supabase.from("notifications").insert({
+        user_id: p.user_id,
+        organization_id: payment.organization_id,
+        title: "✅ تم تجديد الاشتراك",
+        message: `تم الموافقة على طلب الاشتراك وتفعيل الحساب لمدة ${payment.months} شهر.`,
+        type: "sub_approved",
+      });
     }
 
     if (subError) {
@@ -270,21 +276,24 @@ export default function AdminSubscriptionsPage() {
       .update({ status: "rejected", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
       .eq("id", payment.id);
 
-    const { data: profiles } = await supabase
+    const { data: rejProfiles } = await supabase
       .from("profiles")
       .select("user_id")
       .eq("organization_id", payment.organization_id);
-
-    if (profiles) {
-      for (const p of profiles) {
-        await supabase.from("notifications").insert({
-          user_id: p.user_id,
-          organization_id: payment.organization_id,
-          title: "❌ تم رفض طلب الاشتراك",
-          message: "تم رفض طلب الاشتراك. يرجى التأكد من التحويل وإعادة المحاولة.",
-          type: "sub_rejected",
-        });
-      }
+    const { data: rejAdminRoles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin");
+    const rejAdminIds = new Set(rejAdminRoles?.map(r => r.user_id) ?? []);
+    const rejAdmins = rejProfiles?.filter(p => rejAdminIds.has(p.user_id)) ?? [];
+    for (const p of rejAdmins) {
+      await supabase.from("notifications").insert({
+        user_id: p.user_id,
+        organization_id: payment.organization_id,
+        title: "❌ تم رفض طلب الاشتراك",
+        message: "تم رفض طلب الاشتراك. يرجى التأكد من التحويل وإعادة المحاولة.",
+        type: "sub_rejected",
+      });
     }
 
     toast.success("تم رفض طلب الدفع");
