@@ -176,14 +176,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get drive folder path
+    // Get drive folder path (global setting)
     const { data: settingData } = await serviceClient
       .from("admin_settings")
       .select("setting_value")
       .eq("setting_key", "drive_folder_path")
       .single();
 
-    const driveFolderPath = settingData?.setting_value || "/Uploads";
+    const baseDrivePath = settingData?.setting_value || "/Uploads";
+
+    // Get member's folder name
+    const { data: memberSettings } = await serviceClient
+      .from("member_settings")
+      .select("folder_name")
+      .eq("user_id", fileRecord.user_id)
+      .single();
+
+    const memberFolder = memberSettings?.folder_name || "uploads";
+    const driveFolderPath = `${baseDrivePath}/${memberFolder}`.replace(/\/+/g, "/");
 
     // Download file from storage
     const { data: fileBlob, error: downloadError } = await serviceClient.storage
