@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { Building2, Plus, Users, Activity, Loader2, Eye, EyeOff, CheckCircle, XCircle, Shield, Globe, Zap, Info, Trash2, CalendarDays, Ban, Power, CreditCard, Clock, Phone, Mail } from "lucide-react";
+import { Building2, Plus, Users, Activity, Loader2, Eye, EyeOff, CheckCircle, XCircle, Shield, Globe, Zap, Info, Trash2, CalendarDays, Ban, Power, CreditCard, Clock, Phone, Mail, Copy } from "lucide-react";
 import SubscriptionManager from "@/components/SubscriptionManager";
 import { Badge } from "@/components/ui/badge";
 
@@ -45,11 +45,13 @@ export default function SuperAdminDashboard() {
   const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Success dialog after creating org
+  const [createdOrg, setCreatedOrg] = useState<{ name: string; email: string; password: string } | null>(null);
+
   // Details dialog
   const [detailsOrg, setDetailsOrg] = useState<Organization | null>(null);
   const [memberCount, setMemberCount] = useState<number | null>(null);
 
-  // Fetch member count when details org changes
   useEffect(() => {
     if (!detailsOrg) { setMemberCount(null); return; }
     (async () => {
@@ -75,7 +77,7 @@ export default function SuperAdminDashboard() {
   const [showTogglePassword, setShowTogglePassword] = useState(false);
 
   const [form, setForm] = useState({
-    org_name: "", org_email: "", admin_password: "", referral_code: "",
+    org_name: "", org_email: "", admin_password: "",
   });
 
   // Registration requests
@@ -144,6 +146,10 @@ export default function SuperAdminDashboard() {
   };
 
   const handleCreate = async () => {
+    if (!form.org_name.trim() || !form.org_email.trim() || !form.admin_password) {
+      toast.error("جميع الحقول مطلوبة");
+      return;
+    }
     if (form.admin_password.length < 12) {
       toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل");
       return;
@@ -151,21 +157,40 @@ export default function SuperAdminDashboard() {
     setCreating(true);
     const { data, error } = await supabase.functions.invoke("create-organization", {
       body: {
-        org_name: form.org_name,
-        org_email: form.org_email,
+        org_name: form.org_name.trim(),
+        org_email: form.org_email.trim().toLowerCase(),
         admin_password: form.admin_password,
-        referral_code: form.referral_code.trim() || undefined,
       },
     });
     if (error || data?.error) {
-      toast.error(data?.error || error?.message || "فشل إنشاء الشركة");
+      const msg = data?.error || error?.message || "";
+      if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("exists")) {
+        toast.error("هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر.");
+      } else {
+        toast.error(msg || "فشل إنشاء الشركة. يرجى المحاولة مرة أخرى.");
+      }
     } else {
-      toast.success("تم إنشاء الشركة بنجاح!");
+      setCreatedOrg({
+        name: form.org_name.trim(),
+        email: form.org_email.trim().toLowerCase(),
+        password: form.admin_password,
+      });
       setDialogOpen(false);
-      setForm({ org_name: "", org_email: "", admin_password: "", referral_code: "" });
+      setForm({ org_name: "", org_email: "", admin_password: "" });
       fetchOrgs();
     }
     setCreating(false);
+  };
+
+  const handleCopyCredentials = async () => {
+    if (!createdOrg) return;
+    const text = `اسم الشركة: ${createdOrg.name}\nالبريد الإلكتروني: ${createdOrg.email}\nكلمة المرور: ${createdOrg.password}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("تم النسخ بنجاح");
+    } catch {
+      toast.error("فشل النسخ");
+    }
   };
 
   const handleDelete = async () => {
@@ -238,7 +263,7 @@ export default function SuperAdminDashboard() {
               <span className="text-xs font-semibold text-primary uppercase tracking-widest">مالك المنصة</span>
             </div>
             <h1 className="text-3xl font-bold text-foreground">
-              مرحباً، {displayName || organizationName || "مدير المنصة"}
+              مرحباً، {displayName || "مسؤول المنصة"}
             </h1>
             <p className="text-sm text-muted-foreground max-w-md">
               لوحة التحكم الرئيسية للمنصة — إدارة الشركات والمسؤولين وجميع العمليات
@@ -283,11 +308,6 @@ export default function SuperAdminDashboard() {
                 <p className="text-xs text-muted-foreground bg-secondary/50 p-3 rounded-lg">
                   بعد الإنشاء، أرسل البريد الإلكتروني وكلمة المرور لمسؤول الشركة لتسجيل الدخول.
                 </p>
-                <div className="space-y-2">
-                  <Label>كود الإحالة (اختياري)</Label>
-                  <Input value={form.referral_code} onChange={e => setForm(f => ({ ...f, referral_code: e.target.value }))} placeholder="كود الإحالة إن وُجد" dir="ltr" className="text-left" />
-                  <p className="text-xs text-muted-foreground">إذا تم إنشاء الشركة عبر رابط إحالة، أدخل الكود هنا</p>
-                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
@@ -300,6 +320,43 @@ export default function SuperAdminDashboard() {
           </Dialog>
         </div>
       </div>
+
+      {/* Created Org Success Dialog */}
+      <Dialog open={!!createdOrg} onOpenChange={(o) => { if (!o) setCreatedOrg(null); }}>
+        <DialogContent className="bg-card border-border max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-success" />
+              تم إنشاء الشركة بنجاح
+            </DialogTitle>
+          </DialogHeader>
+          {createdOrg && (
+            <div className="space-y-4">
+              <div className="glass-panel p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">اسم الشركة</span>
+                  <span className="text-sm font-bold text-foreground">{createdOrg.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">البريد الإلكتروني</span>
+                  <span className="text-sm text-foreground" dir="ltr">{createdOrg.email}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">كلمة المرور</span>
+                  <span className="text-sm text-foreground" dir="ltr">{"•".repeat(createdOrg.password.length)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreatedOrg(null)}>إلغاء</Button>
+            <Button onClick={handleCopyCredentials} className="gap-2">
+              <Copy className="h-4 w-4" />
+              نسخ البيانات
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -341,27 +398,29 @@ export default function SuperAdminDashboard() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-bold text-foreground">{req.org_name}</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1" dir="ltr">
                           <Mail className="h-3 w-3" />
                           {req.org_email}
                         </span>
-                        {req.whatsapp_phone && (
-                          <a
-                            href={`https://wa.me/${req.whatsapp_phone.replace(/[^0-9]/g, "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-primary hover:underline"
-                            dir="ltr"
-                          >
-                            <Phone className="h-3 w-3" />
-                            {req.whatsapp_phone}
-                          </a>
-                        )}
                         {req.referral_code && (
                           <span className="text-primary">كود: {req.referral_code}</span>
                         )}
                       </div>
+                      {req.whatsapp_phone && (
+                        <div className="mt-1 space-y-0.5">
+                          <span className="text-xs text-muted-foreground" dir="ltr">{req.whatsapp_phone}</span>
+                          <a
+                            href={`https://wa.me/${req.whatsapp_phone.replace(/[^0-9]/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <Phone className="h-3 w-3" />
+                            مراسلة عبر WhatsApp
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -606,7 +665,7 @@ export default function SuperAdminDashboard() {
             <Button
               variant={toggleOrg?.is_active ? "destructive" : "default"}
               onClick={handleToggle}
-              disabled={toggling || !togglePassword || (toggleOrg?.is_active && !toggleReason.trim())}
+              disabled={toggling || !togglePassword || (toggleOrg?.is_active === true && !toggleReason.trim())}
             >
               {toggling && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               {toggleOrg?.is_active ? "تعطيل" : "تفعيل"}

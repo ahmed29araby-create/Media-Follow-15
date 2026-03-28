@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Check, X, Film, Clock, FileEdit, Trash2, Loader2, Eye } from "lucide-react";
+import { Check, X, Film, Clock, FileEdit, Trash2, Loader2, Eye, FolderOpen, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import FilePreviewDialog from "@/components/FilePreviewDialog";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -15,12 +17,26 @@ interface ChangeRequestWithFile extends ChangeRequestRow {
   files: { file_name: string } | null;
 }
 
+interface DriveFolder {
+  id: string;
+  name: string;
+}
+
 export default function ModerationPage() {
   const { organizationId } = useAuth();
   const [pendingFiles, setPendingFiles] = useState<FileRow[]>([]);
   const [changeRequests, setChangeRequests] = useState<ChangeRequestWithFile[]>([]);
   const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set());
   const [previewFile, setPreviewFile] = useState<FileRow | null>(null);
+
+  // Folder picker state
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
+  const [approvalFile, setApprovalFile] = useState<FileRow | null>(null);
+  const [driveFolders, setDriveFolders] = useState<DriveFolder[]>([]);
+  const [loadingFolders, setLoadingFolders] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
 
   const fetchData = async () => {
     const [filesRes, requestsRes] = await Promise.all([
@@ -33,47 +49,92 @@ export default function ModerationPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleFileAction = async (fileId: string, action: "approved" | "rejected", file: FileRow) => {
-    if (action === "approved") {
-      setSyncingFiles(prev => new Set(prev).add(fileId));
-      try {
-        const { data, error } = await supabase.functions.invoke("sync-to-drive", { body: { file_id: fileId } });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
+  const fetchDriveFolders = async () => {
+    setLoadingFolders(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("list-drive-folders", {
+        body: { action: "list" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setDriveFolders(data?.folders ?? []);
+    } catch (err: any) {
+      toast.error(err.message || "فشل تحميل المجلدات");
+    }
+    setLoadingFolders(false);
+  };
 
-        // Notify the member
-        await supabase.from("notifications").insert({
-          user_id: file.user_id,
-          organization_id: organizationId,
-          title: "تمت الموافقة على فيديو ✅",
-          message: `تمت الموافقة على "${file.file_name}"`,
-          type: "approval",
-          related_file_id: fileId,
-        });
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    setCreatingFolder(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("list-drive-folders", {
+        body: { action: "create", folder_name: newFolderName.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setDriveFolders(data?.folders ?? []);
+      setNewFolderName("");
+      setShowNewFolderInput(false);
+      toast.success("تم إنشاء المجلد بنجاح");
+    } catch (err: any) {
+      toast.error(err.message || "فشل إنشاء المجلد");
+    }
+    setCreatingFolder(false);
+  };
 
-        toast.success("تمت الموافقة ومزامنة الملف");
-      } catch (err: any) {
-        toast.error(`فشل المزامنة: ${err.message}`);
-      } finally {
-        setSyncingFiles(prev => { const n = new Set(prev); n.delete(fileId); return n; });
-        fetchData();
-      }
-    } else {
-      const { error } = await supabase.from("files").update({ status: action }).eq("id", fileId);
-      if (error) toast.error(error.message);
-      else {
-        // Notify the member
-        await supabase.from("notifications").insert({
-          user_id: file.user_id,
-          organization_id: organizationId,
-          title: "تم رفض فيديو ❌",
-          message: `تم رفض "${file.file_name}"`,
-          type: "rejection",
-          related_file_id: fileId,
-        });
-        toast.success("تم الرفض");
-        fetchData();
-      }
+  const handleApproveClick = (file: FileRow) => {
+    setApprovalFile(file);
+    setFolderPickerOpen(true);
+    fetchDriveFolders();
+  };
+
+  const handleFolderSelect = async (folderName: string) => {
+    if (!approvalFile) return;
+    const fileId = approvalFile.id;
+    setFolderPickerOpen(false);
+
+    setSyncingFiles(prev => new Set(prev).add(fileId));
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-to-drive", {
+        body: { file_id: fileId, target_subfolder: folderName },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await supabase.from("notifications").insert({
+        user_id: approvalFile.user_id,
+        organization_id: organizationId,
+        title: "تمت الموافقة على فيديو ✅",
+        message: `تمت الموافقة على "${approvalFile.file_name}" وحفظه في مجلد "${folderName}"`,
+        type: "approval",
+        related_file_id: fileId,
+      });
+
+      toast.success(`تمت الموافقة وحفظ الملف في "${folderName}"`);
+    } catch (err: any) {
+      toast.error(`فشل المزامنة: ${err.message}`);
+    } finally {
+      setSyncingFiles(prev => { const n = new Set(prev); n.delete(fileId); return n; });
+      setApprovalFile(null);
+      fetchData();
+    }
+  };
+
+  const handleFileAction = async (fileId: string, action: "rejected", file: FileRow) => {
+    const { error } = await supabase.from("files").update({ status: action }).eq("id", fileId);
+    if (error) toast.error(error.message);
+    else {
+      await supabase.from("notifications").insert({
+        user_id: file.user_id,
+        organization_id: organizationId,
+        title: "تم رفض فيديو ❌",
+        message: `تم رفض "${file.file_name}"`,
+        type: "rejection",
+        related_file_id: fileId,
+      });
+      toast.success("تم الرفض");
+      fetchData();
     }
   };
 
@@ -128,7 +189,7 @@ export default function ModerationPage() {
                   <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10" onClick={() => setPreviewFile(file)}>
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleFileAction(file.id, "approved", file)} disabled={syncingFiles.has(file.id)}>
+                  <Button size="sm" variant="ghost" className="text-success hover:bg-success/10" onClick={() => handleApproveClick(file)} disabled={syncingFiles.has(file.id)}>
                     {syncingFiles.has(file.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   </Button>
                   <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleFileAction(file.id, "rejected", file)}>
@@ -168,6 +229,73 @@ export default function ModerationPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Folder Picker Dialog */}
+      <Dialog open={folderPickerOpen} onOpenChange={(o) => { if (!o) { setFolderPickerOpen(false); setApprovalFile(null); setShowNewFolderInput(false); } }}>
+        <DialogContent className="bg-card border-border max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">اختر مكان حفظ الفيديو</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-2">
+            اختر المجلد الذي سيتم حفظ "<strong className="text-foreground">{approvalFile?.file_name}</strong>" فيه على Google Drive
+          </p>
+
+          {loadingFolders ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {driveFolders.length === 0 ? (
+                <div className="text-center p-4 text-sm text-muted-foreground">
+                  <FolderOpen className="h-6 w-6 mx-auto mb-2" />
+                  لا توجد مجلدات. أنشئ مجلداً جديداً
+                </div>
+              ) : (
+                driveFolders.map(folder => (
+                  <button
+                    key={folder.id}
+                    onClick={() => handleFolderSelect(folder.name)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-secondary/60 hover:border-primary/30 transition-colors text-right"
+                  >
+                    <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                    <span className="text-sm font-medium text-foreground">{folder.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+
+          <div className="border-t border-border pt-3 mt-2">
+            {showNewFolderInput ? (
+              <div className="flex gap-2">
+                <Input
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  placeholder="اسم المجلد الجديد"
+                  className="flex-1"
+                  onKeyDown={e => e.key === "Enter" && handleCreateFolder()}
+                />
+                <Button size="sm" onClick={handleCreateFolder} disabled={creatingFolder || !newFolderName.trim()}>
+                  {creatingFolder ? <Loader2 className="h-4 w-4 animate-spin" /> : "إنشاء"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { setShowNewFolderInput(false); setNewFolderName(""); }}>
+                  إلغاء
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" className="w-full gap-2" onClick={() => setShowNewFolderInput(true)}>
+                <Plus className="h-4 w-4" />
+                إنشاء مجلد جديد
+              </Button>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setFolderPickerOpen(false); setApprovalFile(null); }}>إلغاء</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <FilePreviewDialog
         open={!!previewFile}

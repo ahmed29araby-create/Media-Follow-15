@@ -2,7 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -14,8 +15,10 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { org_name, org_email, admin_password, referral_code, whatsapp_phone } = await req.json();
+    const normalizedEmail = String(org_email ?? "").trim().toLowerCase();
+    const normalizedOrgName = String(org_name ?? "").trim();
 
-    if (!org_name || !org_email || !admin_password) {
+    if (!normalizedOrgName || !normalizedEmail || !admin_password) {
       throw new Error("جميع الحقول المطلوبة يجب ملؤها");
     }
 
@@ -25,7 +28,7 @@ Deno.serve(async (req) => {
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(org_email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       throw new Error("البريد الإلكتروني غير صالح");
     }
 
@@ -33,18 +36,28 @@ Deno.serve(async (req) => {
     const { data: existingOrg } = await adminClient
       .from("organizations")
       .select("id")
-      .eq("email", org_email)
+      .eq("email", normalizedEmail)
       .maybeSingle();
 
     if (existingOrg) {
       throw new Error("هذا البريد الإلكتروني مسجل بالفعل");
     }
 
+    const { data: existingProfile } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (existingProfile) {
+      throw new Error("هذا البريد الإلكتروني مستخدم بالفعل على المنصة");
+    }
+
     // Check if there's already a pending request with this email
     const { data: existingRequest } = await adminClient
       .from("org_registration_requests")
       .select("id")
-      .eq("org_email", org_email)
+      .eq("org_email", normalizedEmail)
       .eq("status", "pending")
       .maybeSingle();
 
@@ -56,8 +69,8 @@ Deno.serve(async (req) => {
     const { error: insertError } = await adminClient
       .from("org_registration_requests")
       .insert({
-        org_name: org_name.trim(),
-        org_email: org_email.trim().toLowerCase(),
+          org_name: normalizedOrgName,
+          org_email: normalizedEmail,
         admin_password,
         referral_code: referral_code || null,
         whatsapp_phone: whatsapp_phone || null,
@@ -76,7 +89,7 @@ Deno.serve(async (req) => {
         await adminClient.from("notifications").insert({
           user_id: sa.user_id,
           title: "طلب تسجيل شركة جديدة",
-          message: `شركة "${org_name}" تطلب الانضمام للمنصة. البريد: ${org_email}${whatsapp_phone ? ` | واتساب: ${whatsapp_phone}` : ""}`,
+            message: `شركة "${normalizedOrgName}" تطلب الانضمام للمنصة. البريد: ${normalizedEmail}${whatsapp_phone ? ` | واتساب: ${whatsapp_phone}` : ""}`,
           type: "org_request",
         });
       }

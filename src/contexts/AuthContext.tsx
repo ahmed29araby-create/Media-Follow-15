@@ -64,19 +64,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.from("profiles").select("account_status, organization_id, display_name").eq("user_id", userId).single(),
       ]);
 
-      // Determine highest role
       const roles = rolesRes.data?.map((r) => r.role) ?? [];
       if (roles.includes("super_admin")) setRole("super_admin");
       else if (roles.includes("admin")) setRole("admin");
       else if (roles.includes("member")) setRole("member");
       else setRole(null);
 
-      setAccountStatus(profileRes.data?.account_status ?? null);
-      setDisplayName(profileRes.data?.display_name ?? null);
-      const orgId = profileRes.data?.organization_id ?? null;
+      // Use profile data, fall back to user_metadata if profiles query fails (e.g. RLS issues)
+      const currentUser = (await supabase.auth.getUser()).data.user;
+      const meta = currentUser?.user_metadata;
+      const profileData = profileRes.data;
+      
+      setAccountStatus(profileData?.account_status ?? meta?.account_status ?? null);
+      setDisplayName(profileData?.display_name ?? meta?.display_name ?? null);
+      const orgId = profileData?.organization_id ?? meta?.organization_id ?? null;
       setOrganizationId(orgId);
 
-      // Fetch org name if exists
       if (orgId) {
         const { data: orgData } = await supabase
           .from("organizations")

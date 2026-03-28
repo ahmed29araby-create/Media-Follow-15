@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 type OAuthState = {
   userId: string;
+  organizationId?: string;
   origin?: string;
 };
 
@@ -31,6 +32,7 @@ Deno.serve(async (req) => {
 
     const parsedState = state ? parseOAuthState(state) : null;
     const userId = parsedState?.userId;
+    const organizationId = parsedState?.organizationId;
     const appOrigin = parsedState?.origin;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -124,14 +126,15 @@ Deno.serve(async (req) => {
     const userInfo = await userInfoRes.json();
     const connectedEmail = userInfo.email || "Unknown";
 
-    // Store refresh token and email
-    await serviceClient.from("admin_settings").upsert(
-      { setting_key: "google_drive_refresh_token", setting_value: tokenData.refresh_token },
-      { onConflict: "setting_key" },
+    // Store refresh token and email per organization (delete old + insert new)
+    const orgId = organizationId || null;
+    await serviceClient.from("admin_settings").delete().eq("setting_key", "google_drive_refresh_token").eq("organization_id", orgId);
+    await serviceClient.from("admin_settings").insert(
+      { setting_key: "google_drive_refresh_token", setting_value: tokenData.refresh_token, organization_id: orgId },
     );
-    await serviceClient.from("admin_settings").upsert(
-      { setting_key: "google_drive_email", setting_value: connectedEmail },
-      { onConflict: "setting_key" },
+    await serviceClient.from("admin_settings").delete().eq("setting_key", "google_drive_email").eq("organization_id", orgId);
+    await serviceClient.from("admin_settings").insert(
+      { setting_key: "google_drive_email", setting_value: connectedEmail, organization_id: orgId },
     );
 
     return closePage("connected", connectedEmail);

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
@@ -528,7 +528,7 @@ export type Database = {
           {
             foreignKeyName: "referrals_referred_org_id_fkey"
             columns: ["referred_org_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -547,42 +547,57 @@ export type Database = {
           created_at: string
           id: string
           months: number
+          notes: string | null
           organization_id: string
+          payment_method: string
+          receipt_url: string | null
           referral_code_used: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           screenshot_path: string | null
           sender_phone: string | null
           status: string
-          user_id: string
+          subscription_id: string | null
+          updated_at: string
+          user_id: string | null
         }
         Insert: {
           amount?: number
           created_at?: string
           id?: string
           months?: number
+          notes?: string | null
           organization_id: string
+          payment_method?: string
+          receipt_url?: string | null
           referral_code_used?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           screenshot_path?: string | null
           sender_phone?: string | null
           status?: string
-          user_id: string
+          subscription_id?: string | null
+          updated_at?: string
+          user_id?: string | null
         }
         Update: {
           amount?: number
           created_at?: string
           id?: string
           months?: number
+          notes?: string | null
           organization_id?: string
+          payment_method?: string
+          receipt_url?: string | null
           referral_code_used?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           screenshot_path?: string | null
           sender_phone?: string | null
           status?: string
-          user_id?: string
+          subscription_id?: string | null
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -592,44 +607,60 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       subscriptions: {
         Row: {
           amount: number
           created_at: string
-          ends_at: string
+          ends_at: string | null
           granted_by: string | null
           id: string
           months: number
           notes: string | null
           organization_id: string
           payment_method: string
+          plan: string
           starts_at: string
+          status: string
+          updated_at: string
         }
         Insert: {
           amount?: number
           created_at?: string
-          ends_at: string
+          ends_at?: string | null
           granted_by?: string | null
           id?: string
           months?: number
           notes?: string | null
           organization_id: string
           payment_method?: string
+          plan?: string
           starts_at?: string
+          status?: string
+          updated_at?: string
         }
         Update: {
           amount?: number
           created_at?: string
-          ends_at?: string
+          ends_at?: string | null
           granted_by?: string | null
           id?: string
           months?: number
           notes?: string | null
           organization_id?: string
           payment_method?: string
+          plan?: string
           starts_at?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -664,7 +695,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_organization_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -675,10 +705,10 @@ export type Database = {
     }
     Enums: {
       account_status: "pending" | "approved" | "rejected"
-      app_role: "admin" | "member" | "super_admin"
+      app_role: "super_admin" | "admin" | "member"
       file_status: "pending" | "approved" | "rejected" | "delete_requested"
       org_request_status: "pending" | "approved" | "rejected"
-      quality_type: "proxy" | "original"
+      quality_type: "original" | "proxy"
       request_status: "pending" | "approved" | "rejected"
       request_type: "edit" | "delete"
     }
@@ -809,10 +839,10 @@ export const Constants = {
   public: {
     Enums: {
       account_status: ["pending", "approved", "rejected"],
-      app_role: ["admin", "member", "super_admin"],
+      app_role: ["super_admin", "admin", "member"],
       file_status: ["pending", "approved", "rejected", "delete_requested"],
       org_request_status: ["pending", "approved", "rejected"],
-      quality_type: ["proxy", "original"],
+      quality_type: ["original", "proxy"],
       request_status: ["pending", "approved", "rejected"],
       request_type: ["edit", "delete"],
     },

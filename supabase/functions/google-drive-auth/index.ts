@@ -8,6 +8,7 @@ const corsHeaders = {
 
 type OAuthState = {
   userId: string;
+  organizationId?: string;
   origin?: string;
 };
 
@@ -81,6 +82,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Get user's organization_id from profiles
+    const { data: profileData } = await serviceClient
+      .from("profiles")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .single();
+
+    const organizationId = profileData?.organization_id;
+
     let clientId = Deno.env.get("GOOGLE_CLIENT_ID")?.trim();
     // Handle case where user pasted full JSON credentials
     if (clientId && clientId.startsWith("{")) {
@@ -101,7 +111,7 @@ Deno.serve(async (req) => {
 
     const redirectUri = `${supabaseUrl}/functions/v1/google-drive-callback`;
     const origin = normalizeOrigin(req.headers.get("origin"));
-    const state = encodeState({ userId: user.id, origin });
+    const state = encodeState({ userId: user.id, organizationId, origin });
 
     // Build Google OAuth URL
     const params = new URLSearchParams({

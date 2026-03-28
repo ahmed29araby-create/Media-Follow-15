@@ -84,12 +84,16 @@ export default function PrivacyPage() {
     if (displayName) setEditDisplayName(displayName);
   }, [displayName]);
 
+  // Check if display name has changed for save button state
+  const displayNameChanged = editDisplayName.trim() !== (displayName || "");
+  const orgNameChanged = editOrgName.trim() !== orgName;
+
   const saveOrgInfo = async () => {
-    if (!editOrgName.trim()) { toast.error("اسم الشركة مطلوب", { id: "org-name-required" }); return; }
-    if (editOrgName.trim() === orgName) return; // no changes
+    if (!editOrgName.trim()) { toast.error("اسم الشركة مطلوب"); return; }
+    if (!orgNameChanged) return;
     setSavingOrg(true);
     const { error } = await supabase.from("organizations").update({ name: editOrgName.trim() }).eq("id", organizationId!);
-    if (error) toast.error(error.message);
+    if (error) toast.error("حدث خطأ أثناء تحديث اسم الشركة. يرجى المحاولة مرة أخرى.");
     else {
       toast.success("تم تحديث اسم الشركة");
       setOrgName(editOrgName.trim());
@@ -98,41 +102,49 @@ export default function PrivacyPage() {
     setSavingOrg(false);
   };
 
+  const saveDisplayName = async () => {
+    if (!editDisplayName.trim()) { toast.error("الاسم مطلوب"); return; }
+    if (!displayNameChanged) return;
+    setSavingDisplayName(true);
+    const { error } = await supabase.from("profiles").update({ display_name: editDisplayName.trim() }).eq("user_id", user!.id);
+    if (error) toast.error("حدث خطأ أثناء تحديث الاسم. يرجى المحاولة مرة أخرى.");
+    else { toast.success("تم تحديث الاسم"); await refreshDisplayName(); }
+    setSavingDisplayName(false);
+  };
+
   const handleEmailChange = async () => {
     if (isOrgUser) {
-      // Admin: update org email
       const trimmed = editOrgEmail.trim().toLowerCase();
-      if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
-      if (trimmed === orgEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
+      if (!trimmed) { toast.error("أدخل البريد الإلكتروني"); return; }
+      if (trimmed === orgEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي"); return; }
       setEmailChangeLoading(true);
       const { error } = await supabase.from("organizations").update({ email: trimmed }).eq("id", organizationId!);
-      if (error) toast.error(error.message);
+      if (error) toast.error("حدث خطأ أثناء تحديث البريد الإلكتروني.");
       else { toast.success("تم تحديث البريد الإلكتروني"); setOrgEmail(trimmed); }
       setEmailChangeLoading(false);
     } else {
-      // Member: update user's own auth email
       const trimmed = editUserEmail.trim().toLowerCase();
-      if (!trimmed) { toast.error("أدخل البريد الإلكتروني", { id: "email-required" }); return; }
-      if (trimmed === userEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي", { id: "email-same" }); return; }
+      if (!trimmed) { toast.error("أدخل البريد الإلكتروني"); return; }
+      if (trimmed === userEmail.toLowerCase()) { toast.error("البريد هو نفس البريد الحالي"); return; }
       setEmailChangeLoading(true);
       const { error } = await supabase.auth.updateUser({ email: trimmed });
-      if (error) toast.error(error.message);
+      if (error) toast.error("حدث خطأ أثناء تحديث البريد الإلكتروني.");
       else { toast.success("تم إرسال رسالة تأكيد إلى البريد الجديد"); setUserEmail(trimmed); }
       setEmailChangeLoading(false);
     }
   };
 
   const handlePasswordChange = async () => {
-    if (!currentPassword) { toast.error("أدخل كلمة المرور الحالية", { id: "pw-current-required" }); return; }
-    if (!newPassword) { toast.error("أدخل كلمة المرور الجديدة", { id: "pw-new-required" }); return; }
-    if (newPassword.length < 12) { toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل", { id: "pw-min-length" }); return; }
-    if (!confirmNewPassword) { toast.error("أدخل تأكيد كلمة المرور", { id: "pw-confirm-required" }); return; }
-    if (newPassword !== confirmNewPassword) { toast.error("كلمتا المرور غير متطابقتين", { id: "pw-mismatch" }); return; }
+    if (!currentPassword) { toast.error("أدخل كلمة المرور الحالية"); return; }
+    if (!newPassword) { toast.error("أدخل كلمة المرور الجديدة"); return; }
+    if (newPassword.length < 12) { toast.error("كلمة المرور يجب أن تكون 12 حرف على الأقل"); return; }
+    if (!confirmNewPassword) { toast.error("أدخل تأكيد كلمة المرور"); return; }
+    if (newPassword !== confirmNewPassword) { toast.error("كلمتا المرور غير متطابقتين"); return; }
     setPasswordLoading(true);
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: user?.email || "", password: currentPassword });
-    if (signInError) { toast.error("كلمة المرور الحالية غير صحيحة", { id: "pw-current-wrong" }); setPasswordLoading(false); return; }
+    if (signInError) { toast.error("كلمة المرور الحالية غير صحيحة"); setPasswordLoading(false); return; }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) toast.error(error.message);
+    if (error) toast.error("حدث خطأ أثناء تحديث كلمة المرور.");
     else { toast.success("تم تحديث كلمة المرور بنجاح"); setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword(""); }
     setPasswordLoading(false);
   };
@@ -140,13 +152,18 @@ export default function PrivacyPage() {
   return (
     <div className="p-6 flex justify-center" dir="rtl">
       <div className="w-full max-w-md space-y-8">
-        {/* Company name & email centered at top */}
-        {isOrgUser && !orgLoading && (
+        {/* Header */}
+        {isSuperAdmin && !isOrgUser ? (
+          <div className="text-center space-y-1 pb-4 border-b border-border">
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>إعدادات الحساب</h1>
+            <p className="text-sm text-muted-foreground" dir="ltr">{user?.email}</p>
+          </div>
+        ) : isOrgUser && !orgLoading ? (
           <div className="text-center space-y-1 pb-4 border-b border-border">
             <h1 className="text-3xl font-extrabold tracking-tight text-foreground" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>{orgName}</h1>
             <p className="text-sm text-muted-foreground" dir="ltr">{orgEmail}</p>
           </div>
-        )}
+        ) : null}
 
         <div className="space-y-6">
           {/* Display Name Change (for super admin) */}
@@ -158,15 +175,7 @@ export default function PrivacyPage() {
               </h3>
               <Input value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder="الاسم" dir="rtl" className="text-right" />
               <div className="flex justify-start">
-                <Button size="sm" onClick={async () => {
-                  if (!editDisplayName.trim()) { toast.error("الاسم مطلوب", { id: "name-required" }); return; }
-                  if (editDisplayName.trim() === displayName) return;
-                  setSavingDisplayName(true);
-                  const { error } = await supabase.from("profiles").update({ display_name: editDisplayName.trim() }).eq("user_id", user!.id);
-                  if (error) toast.error(error.message);
-                  else { toast.success("تم تحديث الاسم"); await refreshDisplayName(); }
-                  setSavingDisplayName(false);
-                }} disabled={savingDisplayName}>
+                <Button size="sm" onClick={saveDisplayName} disabled={savingDisplayName || !displayNameChanged}>
                   {savingDisplayName && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                   حفظ التغييرات
                 </Button>
@@ -184,7 +193,7 @@ export default function PrivacyPage() {
               </h3>
               <Input value={editOrgName} onChange={(e) => setEditOrgName(e.target.value)} placeholder="اسم الشركة" dir="ltr" className="text-left" />
               <div className="flex justify-start">
-                <Button size="sm" onClick={saveOrgInfo} disabled={savingOrg}>
+                <Button size="sm" onClick={saveOrgInfo} disabled={savingOrg || !orgNameChanged}>
                   {savingOrg && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                   حفظ التغييرات
                 </Button>

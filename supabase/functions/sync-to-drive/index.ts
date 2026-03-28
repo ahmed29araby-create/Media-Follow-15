@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { file_id } = await req.json();
+    const { file_id, target_subfolder } = await req.json();
     if (!file_id) {
       return new Response(JSON.stringify({ error: "file_id is required" }), {
         status: 400,
@@ -177,6 +177,14 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Get the organization_id of the file's owner (via the admin who's approving)
+    const { data: profileData } = await serviceClient
+      .from("profiles")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .single();
+    const orgId = profileData?.organization_id;
 
     // If file has no storage_path but already has a drive_path, just approve it
     if (!fileRecord.storage_path) {
@@ -201,11 +209,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get refresh token from admin settings
+    // Get refresh token from admin settings - filtered by organization
     const { data: tokenData } = await serviceClient
       .from("admin_settings")
       .select("setting_value")
       .eq("setting_key", "google_drive_refresh_token")
+      .eq("organization_id", orgId)
       .single();
 
     if (!tokenData?.setting_value) {
@@ -215,11 +224,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get drive folder path (global setting)
+    // Get drive folder path - filtered by organization
     const { data: settingData } = await serviceClient
       .from("admin_settings")
       .select("setting_value")
       .eq("setting_key", "drive_folder_path")
+      .eq("organization_id", orgId)
       .single();
 
     const baseDrivePath = settingData?.setting_value || "/Uploads";
@@ -231,8 +241,14 @@ Deno.serve(async (req) => {
       .eq("user_id", fileRecord.user_id)
       .single();
 
-    const memberFolder = memberSettings?.folder_name || "uploads";
-    const driveFolderPath = `${baseDrivePath}/${memberFolder}`.replace(/\/+/g, "/");
+    // Build drive folder path - use target_subfolder if provided
+    let driveFolderPath: string;
+    if (target_subfolder) {
+      driveFolderPath = `${baseDrivePath}/${target_subfolder}`.replace(/\/+/g, "/");
+    } else {
+      const memberFolder = memberSettings?.folder_name || "uploads";
+      driveFolderPath = `${baseDrivePath}/${memberFolder}`.replace(/\/+/g, "/");
+    }
 
     // Download file from storage
     const { data: fileBlob, error: downloadError } = await serviceClient.storage

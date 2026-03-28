@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -40,7 +41,6 @@ function OrgDisabledScreen() {
 
   const isSubscriptionIssue = !disableReason;
 
-  // Fetch latest appeal status
   useEffect(() => {
     if (!organizationId || !user) { setLoadingAppeal(false); return; }
     supabase
@@ -69,7 +69,6 @@ function OrgDisabledScreen() {
       });
       if (error) throw error;
 
-      // Send notification to super admins
       const { data: superAdmins } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -91,7 +90,7 @@ function OrgDisabledScreen() {
       setShowAppeal(false);
       setAppealText("");
     } catch {
-      // silently fail
+      toast.error("حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.");
     }
     setSubmittingAppeal(false);
   };
@@ -156,7 +155,6 @@ function OrgDisabledScreen() {
           )
         ) : (
           <>
-            {/* Show rejection notice */}
             {lastAppealStatus === "rejected" && !showAppeal && !appealSent && (
               <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
                 <p className="text-sm text-destructive font-medium">✕ تم رفض طلب إعادة التفعيل</p>
@@ -229,7 +227,7 @@ function ProtectedRoutes() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (accountStatus !== "approved") return <PendingApproval />;
+  if (accountStatus !== "approved" && !isSuperAdmin) return <PendingApproval />;
   if (!isOrgActive && !isSuperAdmin) return <OrgDisabledScreen />;
 
   return (

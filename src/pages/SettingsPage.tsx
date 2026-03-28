@@ -22,10 +22,13 @@ export default function SettingsPage() {
   const [savingVodafone, setSavingVodafone] = useState(false);
 
   useEffect(() => {
+    if (!organizationId && !isSuperAdmin) { setLoading(false); return; }
     const fetchSettings = async () => {
+      // Each org has its own Drive settings filtered by organization_id
+      const orgFilter = organizationId || "global";
       const [folderRes, emailRes] = await Promise.all([
-        supabase.from("admin_settings").select("setting_value").eq("setting_key", "drive_folder_path").maybeSingle(),
-        supabase.from("admin_settings").select("setting_value").eq("setting_key", "google_drive_email").maybeSingle(),
+        supabase.from("admin_settings").select("setting_value").eq("setting_key", "drive_folder_path").eq("organization_id", orgFilter).maybeSingle(),
+        supabase.from("admin_settings").select("setting_value").eq("setting_key", "google_drive_email").eq("organization_id", orgFilter).maybeSingle(),
       ]);
       if (folderRes.data) setDriveFolderPath(folderRes.data.setting_value);
       if (emailRes.data) setConnectedEmail(emailRes.data.setting_value);
@@ -63,9 +66,10 @@ export default function SettingsPage() {
 
   const saveSetting = async (key: string, value: string) => {
     setSaving(true);
-    const { error } = await supabase.from("admin_settings").upsert(
-      { setting_key: key, setting_value: value, organization_id: organizationId },
-      { onConflict: "setting_key" }
+    // Delete existing setting for this org+key, then insert new one
+    await supabase.from("admin_settings").delete().eq("setting_key", key).eq("organization_id", organizationId);
+    const { error } = await supabase.from("admin_settings").insert(
+      { setting_key: key, setting_value: value, organization_id: organizationId }
     );
     if (error) toast.error(error.message);
     else toast.success("تم حفظ الإعدادات");
@@ -112,7 +116,7 @@ export default function SettingsPage() {
         if (popup?.closed) {
           clearInterval(fallback);
           window.removeEventListener("message", onMessage);
-          const { data: emailData } = await supabase.from("admin_settings").select("setting_value").eq("setting_key", "google_drive_email").maybeSingle();
+          const { data: emailData } = await supabase.from("admin_settings").select("setting_value").eq("setting_key", "google_drive_email").eq("organization_id", organizationId).maybeSingle();
           if (emailData) { setConnectedEmail(emailData.setting_value); toast.success("تم ربط Google Drive بنجاح!"); }
           setConnecting(false);
         }
@@ -126,8 +130,8 @@ export default function SettingsPage() {
   const disconnectDrive = async () => {
     setDisconnecting(true);
     await Promise.all([
-      supabase.from("admin_settings").delete().eq("setting_key", "google_drive_refresh_token"),
-      supabase.from("admin_settings").delete().eq("setting_key", "google_drive_email"),
+      supabase.from("admin_settings").delete().eq("setting_key", "google_drive_refresh_token").eq("organization_id", organizationId),
+      supabase.from("admin_settings").delete().eq("setting_key", "google_drive_email").eq("organization_id", organizationId),
     ]);
     setConnectedEmail(null);
     toast.success("تم فصل Google Drive");

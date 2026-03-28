@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import OrganizationRequestPendingScreen from "@/components/auth/OrganizationRequestPendingScreen";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff, Zap, ArrowRight, CheckCircle } from "lucide-react";
+import { Loader2, Eye, EyeOff, Zap } from "lucide-react";
 
 export default function RegisterOrganizationPage() {
   const navigate = useNavigate();
@@ -13,14 +14,48 @@ export default function RegisterOrganizationPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [form, setForm] = useState({
     org_name: "",
     org_email: "",
     admin_password: "",
+    confirm_password: "",
     referral_code: searchParams.get("ref") || "",
     whatsapp_phone: "",
   });
+
+  const getFriendlyError = (error: any, data: any): string => {
+    const msg = data?.error || error?.message || "";
+    const lower = msg.toLowerCase();
+
+     if (msg.includes("هذا البريد الإلكتروني مسجل بالفعل") || msg.includes("يوجد طلب قيد المراجعة بهذا البريد الإلكتروني بالفعل")) {
+      return "هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر.";
+    }
+    if (msg.includes("البريد الإلكتروني غير صالح")) {
+      return "البريد الإلكتروني غير صالح. تأكد من كتابته بشكل صحيح.";
+    }
+    if (msg.includes("كلمة المرور يجب أن تكون 12 حرف على الأقل")) {
+      return "كلمة المرور يجب أن تكون 12 حرفًا على الأقل.";
+    }
+
+    if (lower.includes("already") || lower.includes("duplicate") || lower.includes("unique") || lower.includes("exists")) {
+      return "هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر.";
+    }
+    if (lower.includes("password")) {
+      return "كلمة المرور غير صالحة. يرجى التأكد منها والمحاولة مرة أخرى.";
+    }
+    if (lower.includes("network") || lower.includes("fetch") || lower.includes("failed to send")) {
+      return "تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.";
+    }
+    if (lower.includes("rate") || lower.includes("limit")) {
+      return "محاولات كثيرة. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.";
+    }
+    if (msg) {
+      return msg;
+    }
+    return "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,51 +65,41 @@ export default function RegisterOrganizationPage() {
       return;
     }
 
-    setLoading(true);
-    const { data, error } = await supabase.functions.invoke("submit-organization-request", {
-      body: {
-        org_name: form.org_name.trim(),
-        org_email: form.org_email.trim().toLowerCase(),
-        admin_password: form.admin_password,
-        referral_code: form.referral_code.trim() || undefined,
-        whatsapp_phone: form.whatsapp_phone.trim() || undefined,
-      },
-    });
+    if (form.admin_password !== form.confirm_password) {
+      toast.error("كلمة المرور وتأكيد كلمة المرور غير متطابقتين");
+      return;
+    }
 
-    if (error || data?.error) {
-      toast.error(data?.error || error?.message || "حدث خطأ أثناء إرسال الطلب");
-    } else {
-      setSuccess(true);
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("submit-organization-request", {
+        body: {
+          org_name: form.org_name.trim(),
+          org_email: form.org_email.trim().toLowerCase(),
+          admin_password: form.admin_password,
+          referral_code: form.referral_code.trim() || undefined,
+          whatsapp_phone: form.whatsapp_phone.trim() || undefined,
+        },
+      });
+
+      if (error || data?.error) {
+        toast.error(getFriendlyError(error, data));
+      } else {
+        setSuccess(true);
+      }
+    } catch {
+      toast.error("تعذر الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
     }
     setLoading(false);
   };
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-accent/5 blur-3xl" />
-        </div>
-        <div className="relative glass-panel w-full max-w-md p-8 text-center space-y-6 animate-slide-in" dir="rtl">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 mx-auto">
-            <CheckCircle className="h-10 w-10 text-primary" />
-          </div>
-          <h2 className="text-xl font-bold text-foreground">تم إرسال طلبك بنجاح!</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            طلب إنشاء الشركة قيد المراجعة. سيتم تفعيل حسابك بعد الموافقة من إدارة المنصة.
-          </p>
-          {form.whatsapp_phone && (
-            <p className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3">
-              سنتواصل معك عبر WhatsApp على الرقم المُدخل عند تفعيل الشركة.
-            </p>
-          )}
-          <Button variant="outline" onClick={() => navigate("/auth")} className="gap-2">
-            <ArrowRight className="h-4 w-4" />
-            العودة لتسجيل الدخول
-          </Button>
-        </div>
-      </div>
+      <OrganizationRequestPendingScreen
+        hasWhatsapp={Boolean(form.whatsapp_phone.trim())}
+        onBack={() => navigate("/auth")}
+      />
     );
   }
 
@@ -153,6 +178,30 @@ export default function RegisterOrganizationPage() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="confirm_password">تأكيد كلمة المرور</Label>
+            <div className="relative">
+              <Input
+                id="confirm_password"
+                type={showConfirmPassword ? "text" : "password"}
+                value={form.confirm_password}
+                onChange={e => setForm(f => ({ ...f, confirm_password: e.target.value }))}
+                placeholder="••••••••••••"
+                required
+                minLength={12}
+                dir="ltr"
+                className="text-left pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="referral_code">كود الإحالة (اختياري)</Label>
             <Input
               id="referral_code"
@@ -171,7 +220,7 @@ export default function RegisterOrganizationPage() {
               type="tel"
               value={form.whatsapp_phone}
               onChange={e => setForm(f => ({ ...f, whatsapp_phone: e.target.value }))}
-              placeholder="+966 5xx xxx xxxx"
+              placeholder="+20"
               dir="ltr"
               className="text-left"
             />
